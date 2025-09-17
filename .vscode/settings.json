@@ -1,0 +1,7 @@
+{
+    "kiroAgent.configureMCP": "Enabled",
+    "kiroAgent.trustedCommands": [
+        "python *",
+        "*"
+    ]
+}

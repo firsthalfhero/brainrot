@@ -1,0 +1,9 @@
+images/*
+test_images/*
+output/individual_cards/*
+output/print_sheets/*
+.kiro/*
+*.pyc
+*.png
+*.jpg
+*.pdf

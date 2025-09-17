@@ -1,0 +1,459 @@
+"""
+Configuration settings for the Trading Card Generator.
+"""
+
+from typing import Dict, Tuple, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class CardConfig:
+    """Configuration for card design and layout."""
+    
+    # Base dimensions (A5 at 300 DPI, adjusted for print layout)
+    base_width: int = 1745  # A5 width at 300 DPI (148mm) - adjusted for print layout
+    base_height: int = 2468  # A5 height at 300 DPI (210mm) - adjusted for print layout
+    dpi: int = 300
+    
+    # Layout proportions
+    image_ratio: float = 0.6  # 60% of card height for image
+    margin: int = 50  # pixels
+    inner_margin: int = 20  # pixels - margin within card elements
+    
+    # Colors
+    background_color: str = '#FFFFFF'
+    text_color: str = '#000000'
+    border_color: str = '#CCCCCC'
+    border_width: int = 2  # pixels
+    
+    # Typography
+    title_font_size: int = 48
+    stats_font_size: int = 36
+    
+    def __post_init__(self):
+        """Validate configuration values after initialization."""
+        if self.dpi < 72:
+            raise ValueError("DPI must be at least 72")
+        if self.dpi > 600:
+            raise ValueError("DPI cannot exceed 600 (performance limitation)")
+        
+        if not (0.3 <= self.image_ratio <= 0.8):
+            raise ValueError("Image ratio must be between 0.3 and 0.8")
+        
+        if self.margin < 10:
+            raise ValueError("Margin must be at least 10 pixels")
+        if self.margin > 200:
+            raise ValueError("Margin cannot exceed 200 pixels")
+        
+        if self.inner_margin < 5:
+            raise ValueError("Inner margin must be at least 5 pixels")
+        if self.inner_margin > 100:
+            raise ValueError("Inner margin cannot exceed 100 pixels")
+        
+        if self.title_font_size < 20:
+            raise ValueError("Title font size must be at least 20")
+        if self.title_font_size > 100:
+            raise ValueError("Title font size cannot exceed 100")
+        
+        if self.stats_font_size < 16:
+            raise ValueError("Stats font size must be at least 16")
+        if self.stats_font_size > 80:
+            raise ValueError("Stats font size cannot exceed 80")
+    
+    @property
+    def width(self) -> int:
+        """Calculate actual width based on DPI scaling."""
+        scale_factor = self.dpi / 300.0
+        return int(self.base_width * scale_factor)
+    
+    @property
+    def height(self) -> int:
+        """Calculate actual height based on DPI scaling."""
+        scale_factor = self.dpi / 300.0
+        return int(self.base_height * scale_factor)
+    
+    @property
+    def image_height(self) -> int:
+        """Calculate image area height."""
+        return int(self.height * self.image_ratio)
+    
+    @property
+    def text_height(self) -> int:
+        """Calculate text area height."""
+        return self.height - self.image_height
+    
+    @property
+    def scaled_margin(self) -> int:
+        """Calculate margin scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.margin * scale_factor)
+    
+    @property
+    def scaled_inner_margin(self) -> int:
+        """Calculate inner margin scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.inner_margin * scale_factor)
+    
+    @property
+    def scaled_title_font_size(self) -> int:
+        """Calculate title font size scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.title_font_size * scale_factor)
+    
+    @property
+    def scaled_stats_font_size(self) -> int:
+        """Calculate stats font size scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.stats_font_size * scale_factor)
+
+
+@dataclass 
+class PrintConfig:
+    """Configuration for print layout and formatting."""
+    
+    # Base A4 dimensions at 300 DPI (landscape)
+    base_sheet_width: int = 3508  # A4 height becomes width in landscape (297mm)
+    base_sheet_height: int = 2480  # A4 width becomes height in landscape (210mm)
+    dpi: int = 300
+    
+    # Layout
+    cards_per_sheet: int = 2
+    sheet_margin: int = 6  # pixels - minimal margin for cutting
+    card_spacing: int = 6  # pixels between cards - minimal spacing for cutting
+    
+    # Cut guides
+    cut_guide_width: int = 2
+    cut_guide_color: str = '#000000'
+    cut_guide_length: int = 20  # pixels
+    show_cut_guides: bool = True
+    
+    def __post_init__(self):
+        """Validate configuration values after initialization."""
+        if self.dpi < 72:
+            raise ValueError("DPI must be at least 72")
+        if self.dpi > 600:
+            raise ValueError("DPI cannot exceed 600 (performance limitation)")
+        
+        if self.cards_per_sheet < 1:
+            raise ValueError("Cards per sheet must be at least 1")
+        if self.cards_per_sheet > 6:
+            raise ValueError("Cards per sheet cannot exceed 6 (layout limitation)")
+        
+        if self.sheet_margin < 0:
+            raise ValueError("Sheet margin cannot be negative")
+        if self.sheet_margin > 100:
+            raise ValueError("Sheet margin cannot exceed 100 pixels")
+        
+        if self.card_spacing < 0:
+            raise ValueError("Card spacing cannot be negative")
+        if self.card_spacing > 50:
+            raise ValueError("Card spacing cannot exceed 50 pixels")
+        
+        if self.cut_guide_width < 1:
+            raise ValueError("Cut guide width must be at least 1 pixel")
+        if self.cut_guide_width > 10:
+            raise ValueError("Cut guide width cannot exceed 10 pixels")
+        
+        if self.cut_guide_length < 5:
+            raise ValueError("Cut guide length must be at least 5 pixels")
+        if self.cut_guide_length > 100:
+            raise ValueError("Cut guide length cannot exceed 100 pixels")
+    
+    @property
+    def sheet_width(self) -> int:
+        """Calculate actual sheet width based on DPI scaling."""
+        scale_factor = self.dpi / 300.0
+        return int(self.base_sheet_width * scale_factor)
+    
+    @property
+    def sheet_height(self) -> int:
+        """Calculate actual sheet height based on DPI scaling."""
+        scale_factor = self.dpi / 300.0
+        return int(self.base_sheet_height * scale_factor)
+    
+    @property
+    def scaled_sheet_margin(self) -> int:
+        """Calculate sheet margin scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.sheet_margin * scale_factor)
+    
+    @property
+    def scaled_card_spacing(self) -> int:
+        """Calculate card spacing scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.card_spacing * scale_factor)
+    
+    @property
+    def scaled_cut_guide_width(self) -> int:
+        """Calculate cut guide width scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return max(1, int(self.cut_guide_width * scale_factor))
+    
+    @property
+    def scaled_cut_guide_length(self) -> int:
+        """Calculate cut guide length scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.cut_guide_length * scale_factor)
+
+
+@dataclass
+class OutputConfig:
+    """Configuration for output files and directories."""
+    
+    # Directory paths
+    individual_cards_dir: str = 'output/individual_cards'
+    print_sheets_dir: str = 'output/print_sheets'
+    
+    # File formats
+    formats: Tuple[str, ...] = ('PNG',)
+    image_quality: int = 95  # for JPEG if needed
+    pdf_quality: int = 95  # for PDF compression
+    
+    # File naming
+    card_filename_template: str = '{name}_{tier}_card'
+    sheet_filename_template: str = 'print_sheet_{batch_number:03d}'
+    
+    # Output options
+    create_subdirectories: bool = True  # Create subdirectories by tier
+    overwrite_existing: bool = True  # Overwrite existing files
+    
+    def __post_init__(self):
+        """Validate configuration values after initialization."""
+        # Validate formats
+        valid_formats = {'PNG', 'PDF', 'JPEG', 'JPG'}
+        for fmt in self.formats:
+            if fmt.upper() not in valid_formats:
+                raise ValueError(f"Unsupported format: {fmt}. Valid formats: {', '.join(valid_formats)}")
+        
+        # Validate quality settings
+        if not (1 <= self.image_quality <= 100):
+            raise ValueError("Image quality must be between 1 and 100")
+        
+        if not (1 <= self.pdf_quality <= 100):
+            raise ValueError("PDF quality must be between 1 and 100")
+        
+        # Validate filename templates
+        if not self.card_filename_template:
+            raise ValueError("Card filename template cannot be empty")
+        
+        if not self.sheet_filename_template:
+            raise ValueError("Sheet filename template cannot be empty")
+        
+        # Check for required template variables
+        required_card_vars = ['{name}', '{tier}']
+        for var in required_card_vars:
+            if var not in self.card_filename_template:
+                raise ValueError(f"Card filename template must contain {var}")
+        
+        if '{batch_number' not in self.sheet_filename_template:
+            raise ValueError("Sheet filename template must contain {batch_number}")
+    
+    @property
+    def normalized_formats(self) -> Tuple[str, ...]:
+        """Get formats normalized to uppercase."""
+        return tuple(fmt.upper() for fmt in self.formats)
+    
+    def get_card_filename(self, name: str, tier: str, format_ext: str) -> str:
+        """Generate a card filename with the given parameters."""
+        # Clean the name for filesystem safety
+        safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '-', '_')).strip()
+        safe_name = safe_name.replace(' ', '_')
+        
+        filename = self.card_filename_template.format(
+            name=safe_name,
+            tier=tier
+        )
+        return f"{filename}.{format_ext.lower()}"
+    
+    def get_sheet_filename(self, batch_number: int, format_ext: str) -> str:
+        """Generate a sheet filename with the given parameters."""
+        filename = self.sheet_filename_template.format(
+            batch_number=batch_number
+        )
+        return f"{filename}.{format_ext.lower()}"
+
+
+# Tier color mapping for visual consistency
+TIER_COLORS: Dict[str, str] = {
+    'Common': '#808080',      # Gray
+    'Rare': '#4169E1',        # Blue  
+    'Epic': '#8A2BE2',        # Purple
+    'Legendary': '#FF8C00',   # Orange
+    'Mythic': '#DC143C',      # Red
+    'Divine': '#FFD700',      # Gold
+    'Celestial': '#00FFFF',   # Cyan
+    'OG': '#FF1493',          # Deep Pink (placeholder for rainbow)
+}
+
+# Default file paths
+DEFAULT_CSV_PATH = 'steal_a_brainrot_complete_database.csv'
+DEFAULT_IMAGES_DIR = 'images/'
+
+
+class ConfigurationManager:
+    """Manager for creating and validating configuration objects."""
+    
+    @staticmethod
+    def create_card_config(
+        dpi: Optional[int] = None,
+        image_ratio: Optional[float] = None,
+        margin: Optional[int] = None,
+        inner_margin: Optional[int] = None,
+        title_font_size: Optional[int] = None,
+        stats_font_size: Optional[int] = None,
+        **kwargs
+    ) -> CardConfig:
+        """
+        Create a CardConfig with optional overrides.
+        
+        Args:
+            dpi: DPI setting for card generation
+            image_ratio: Ratio of card height for image (0.3-0.8)
+            margin: Outer margin in pixels
+            inner_margin: Inner margin in pixels
+            title_font_size: Font size for character names
+            stats_font_size: Font size for stats
+            **kwargs: Additional configuration options
+            
+        Returns:
+            Configured CardConfig instance
+            
+        Raises:
+            ValueError: If any configuration value is invalid
+        """
+        config_dict = {}
+        
+        if dpi is not None:
+            config_dict['dpi'] = dpi
+        if image_ratio is not None:
+            config_dict['image_ratio'] = image_ratio
+        if margin is not None:
+            config_dict['margin'] = margin
+        if inner_margin is not None:
+            config_dict['inner_margin'] = inner_margin
+        if title_font_size is not None:
+            config_dict['title_font_size'] = title_font_size
+        if stats_font_size is not None:
+            config_dict['stats_font_size'] = stats_font_size
+        
+        # Add any additional kwargs
+        config_dict.update(kwargs)
+        
+        return CardConfig(**config_dict)
+    
+    @staticmethod
+    def create_print_config(
+        dpi: Optional[int] = None,
+        cards_per_sheet: Optional[int] = None,
+        sheet_margin: Optional[int] = None,
+        card_spacing: Optional[int] = None,
+        show_cut_guides: Optional[bool] = None,
+        **kwargs
+    ) -> PrintConfig:
+        """
+        Create a PrintConfig with optional overrides.
+        
+        Args:
+            dpi: DPI setting for print sheets
+            cards_per_sheet: Number of cards per sheet (1-6)
+            sheet_margin: Margin around sheet edges
+            card_spacing: Spacing between cards
+            show_cut_guides: Whether to show cutting guides
+            **kwargs: Additional configuration options
+            
+        Returns:
+            Configured PrintConfig instance
+            
+        Raises:
+            ValueError: If any configuration value is invalid
+        """
+        config_dict = {}
+        
+        if dpi is not None:
+            config_dict['dpi'] = dpi
+        if cards_per_sheet is not None:
+            config_dict['cards_per_sheet'] = cards_per_sheet
+        if sheet_margin is not None:
+            config_dict['sheet_margin'] = sheet_margin
+        if card_spacing is not None:
+            config_dict['card_spacing'] = card_spacing
+        if show_cut_guides is not None:
+            config_dict['show_cut_guides'] = show_cut_guides
+        
+        # Add any additional kwargs
+        config_dict.update(kwargs)
+        
+        return PrintConfig(**config_dict)
+    
+    @staticmethod
+    def create_output_config(
+        formats: Optional[Tuple[str, ...]] = None,
+        individual_cards_dir: Optional[str] = None,
+        print_sheets_dir: Optional[str] = None,
+        image_quality: Optional[int] = None,
+        pdf_quality: Optional[int] = None,
+        create_subdirectories: Optional[bool] = None,
+        overwrite_existing: Optional[bool] = None,
+        **kwargs
+    ) -> OutputConfig:
+        """
+        Create an OutputConfig with optional overrides.
+        
+        Args:
+            formats: Output formats tuple (PNG, PDF, JPEG)
+            individual_cards_dir: Directory for individual cards
+            print_sheets_dir: Directory for print sheets
+            image_quality: Quality for image formats (1-100)
+            pdf_quality: Quality for PDF format (1-100)
+            create_subdirectories: Whether to create tier subdirectories
+            overwrite_existing: Whether to overwrite existing files
+            **kwargs: Additional configuration options
+            
+        Returns:
+            Configured OutputConfig instance
+            
+        Raises:
+            ValueError: If any configuration value is invalid
+        """
+        config_dict = {}
+        
+        if formats is not None:
+            config_dict['formats'] = formats
+        if individual_cards_dir is not None:
+            config_dict['individual_cards_dir'] = individual_cards_dir
+        if print_sheets_dir is not None:
+            config_dict['print_sheets_dir'] = print_sheets_dir
+        if image_quality is not None:
+            config_dict['image_quality'] = image_quality
+        if pdf_quality is not None:
+            config_dict['pdf_quality'] = pdf_quality
+        if create_subdirectories is not None:
+            config_dict['create_subdirectories'] = create_subdirectories
+        if overwrite_existing is not None:
+            config_dict['overwrite_existing'] = overwrite_existing
+        
+        # Add any additional kwargs
+        config_dict.update(kwargs)
+        
+        return OutputConfig(**config_dict)
+    
+    @staticmethod
+    def validate_dpi_compatibility(card_config: CardConfig, print_config: PrintConfig) -> bool:
+        """
+        Validate that card and print configurations have compatible DPI settings.
+        
+        Args:
+            card_config: Card configuration
+            print_config: Print configuration
+            
+        Returns:
+            True if configurations are compatible
+            
+        Raises:
+            ValueError: If DPI settings are incompatible
+        """
+        if card_config.dpi != print_config.dpi:
+            raise ValueError(
+                f"Card DPI ({card_config.dpi}) must match print DPI ({print_config.dpi})"
+            )
+        return True
