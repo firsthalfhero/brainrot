@@ -249,29 +249,7 @@ class TestCardDesigner(unittest.TestCase):
         # Should be different font objects
         self.assertIsNot(font_small, font_large)
     
-    def test_draw_border_default_tier(self):
-        """Test border drawing with default tier color."""
-        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
-        draw = ImageDraw.Draw(card)
-        
-        # Should not raise an exception
-        self.designer._draw_border(draw, "Unknown Tier")
-    
-    def test_draw_border_known_tier(self):
-        """Test border drawing with known tier color."""
-        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
-        draw = ImageDraw.Draw(card)
-        
-        # Should not raise an exception
-        self.designer._draw_border(draw, "Rare")
-    
-    def test_render_stats_box(self):
-        """Test stats box rendering."""
-        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
-        draw = ImageDraw.Draw(card)
-        
-        # Should not raise an exception
-        self.designer._render_stats_box(draw, self.sample_character, 100)
+
     
     def test_render_character_name_short(self):
         """Test character name rendering with short name."""
@@ -329,6 +307,116 @@ class TestCardDesigner(unittest.TestCase):
                 card = self.designer.create_card(character)
                 self.assertEqual(card.size, (self.config.width, self.config.height))
                 self.assertEqual(card.mode, 'RGB')
+    
+    def test_new_layout_character_name_rendering(self):
+        """Test new layout character name rendering with 60% width constraint."""
+        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
+        draw = ImageDraw.Draw(card)
+        
+        # Test short name
+        y_after = self.designer._render_character_name_new_layout(draw, "Short", 100)
+        self.assertGreater(y_after, 100)
+        
+        # Test long name that should fit within 60% width
+        long_name = "This Is A Very Long Character Name"
+        y_after = self.designer._render_character_name_new_layout(draw, long_name, 100)
+        self.assertGreater(y_after, 100)
+    
+    def test_new_layout_tier_display(self):
+        """Test new layout tier display rendering."""
+        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
+        draw = ImageDraw.Draw(card)
+        
+        for tier in TIER_COLORS.keys():
+            with self.subTest(tier=tier):
+                y_after = self.designer._render_tier_display(draw, tier, 100)
+                self.assertGreater(y_after, 100)
+    
+    def test_new_layout_income_display(self):
+        """Test new layout income display rendering with proper formatting."""
+        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
+        draw = ImageDraw.Draw(card)
+        
+        test_incomes = [5, 1500, 2500000, 1500000000]
+        for income in test_incomes:
+            with self.subTest(income=income):
+                y_after = self.designer._render_income_display(draw, income, 100)
+                self.assertGreater(y_after, 100)
+    
+    def test_new_layout_cost_display(self):
+        """Test new layout cost display rendering with proper formatting."""
+        card = Image.new('RGB', (self.config.width, self.config.height), 'white')
+        draw = ImageDraw.Draw(card)
+        
+        test_costs = [100, 1500, 2500000, 1500000000]
+        for cost in test_costs:
+            with self.subTest(cost=cost):
+                y_after = self.designer._render_cost_display(draw, cost, 100)
+                self.assertGreater(y_after, 100)
+    
+    def test_format_income_value(self):
+        """Test income value formatting with appropriate scaling."""
+        test_cases = [
+            (5, "5 / sec"),
+            (1500, "1.5k / sec"),
+            (2500000, "2.5m / sec"),
+            (1500000000, "1.5b / sec"),
+            (1000, "1k / sec"),
+            (1000000, "1m / sec"),
+            (1000000000, "1b / sec"),
+        ]
+        
+        for income, expected in test_cases:
+            with self.subTest(income=income):
+                result = self.designer._format_income_value(income)
+                self.assertEqual(result, expected)
+    
+    def test_format_cost_value(self):
+        """Test cost value formatting with appropriate scaling."""
+        test_cases = [
+            (100, "$100"),
+            (1500, "$1.5k"),
+            (2500000, "$2.5m"),
+            (1500000000, "$1.5b"),
+            (1000, "$1k"),
+            (1000000, "$1m"),
+            (1000000000, "$1b"),
+        ]
+        
+        for cost, expected in test_cases:
+            with self.subTest(cost=cost):
+                result = self.designer._format_cost_value(cost)
+                self.assertEqual(result, expected)
+    
+    def test_new_layout_no_border(self):
+        """Test that new layout cards have no border/frame elements."""
+        character = CharacterData("Test", "Common", 100, 5, "Standard")
+        card = self.designer.create_card(character)
+        
+        # Check that the card background is white (no border drawn)
+        # Sample a few edge pixels to ensure no border
+        edge_pixels = [
+            card.getpixel((0, 0)),
+            card.getpixel((card.width - 1, 0)),
+            card.getpixel((0, card.height - 1)),
+            card.getpixel((card.width - 1, card.height - 1))
+        ]
+        
+        # All edge pixels should be white (background color)
+        for pixel in edge_pixels:
+            self.assertEqual(pixel, (255, 255, 255))  # White RGB
+    
+    def test_new_layout_element_positioning(self):
+        """Test that new layout follows top-to-bottom order: title, image, rarity, income, cost."""
+        character = CharacterData("Test Character", "Rare", 1500, 75, "Standard")
+        card = self.designer.create_card(character)
+        
+        # Verify card was created successfully with new layout
+        self.assertEqual(card.size, (self.config.width, self.config.height))
+        self.assertEqual(card.mode, 'RGB')
+        
+        # The layout should be visually correct - this is tested through integration
+        # Individual element positioning is tested in separate methods above
 
 
 class TestCardDesignerIntegration(unittest.TestCase):

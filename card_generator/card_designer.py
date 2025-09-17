@@ -32,7 +32,8 @@ class CardDesigner:
         
     def create_card(self, character: CharacterData, image: Optional[Image.Image] = None) -> Image.Image:
         """
-        Create a complete trading card for a character.
+        Create a complete trading card for a character with new top-to-bottom layout:
+        title, image, rarity, income, cost.
         
         Args:
             character: Character data to display on the card
@@ -41,18 +42,19 @@ class CardDesigner:
         Returns:
             PIL Image of the complete trading card
         """
-        # Create base card
+        # Create base card (no border as per requirements)
         card = Image.new('RGB', (self.config.width, self.config.height), self.config.background_color)
         draw = ImageDraw.Draw(card)
         
-        # Add border
-        self._draw_border(draw, character.tier)
+        # Calculate layout positions for new top-to-bottom design
+        current_y = self.config.scaled_margin
         
-        # Calculate layout areas
-        image_area_height = self.config.image_height - (2 * self.config.scaled_margin)
-        text_area_y = self.config.image_height + self.config.scaled_margin
+        # 1. Character name (title) - large bold font, center aligned, 60% width constraint
+        current_y = self._render_character_name_new_layout(draw, character.name, current_y)
+        current_y += self.config.scaled_inner_margin
         
-        # Process and add character image
+        # 2. Character image - center aligned, height-based scaling maintained
+        image_area_height = int(self.config.height * 0.4)  # Allocate 40% of card height for image
         if image:
             processed_image = self._prepare_character_image(image, image_area_height)
         else:
@@ -60,29 +62,23 @@ class CardDesigner:
             
         # Center the image horizontally
         image_x = (self.config.width - processed_image.width) // 2
-        image_y = self.config.scaled_margin
-        card.paste(processed_image, (image_x, image_y))
+        card.paste(processed_image, (image_x, current_y))
+        current_y += processed_image.height + self.config.scaled_inner_margin
         
-        # Add character name
-        name_y = self._render_character_name(draw, character.name, text_area_y)
+        # 3. Tier/Rarity - Heading 3 equivalent, center aligned, large font
+        current_y = self._render_tier_display(draw, character.tier, current_y)
+        current_y += self.config.scaled_inner_margin
         
-        # Add stats box
-        stats_y = name_y + self.config.scaled_inner_margin  # Small gap after name
-        self._render_stats_box(draw, character, stats_y)
+        # 4. Income per second - Heading 5 bold, center aligned, formatted as "1 / sec" or "1b / sec"
+        current_y = self._render_income_display(draw, character.income, current_y)
+        current_y += self.config.scaled_inner_margin // 2
+        
+        # 5. Cost - Heading 5 bold, center aligned, formatted as "$100k" or "$1b"
+        self._render_cost_display(draw, character.cost, current_y)
         
         return card
     
-    def _draw_border(self, draw: ImageDraw.Draw, tier: str) -> None:
-        """Draw tier-colored border around the card."""
-        border_color = TIER_COLORS.get(tier, self.config.border_color)
-        border_width = 8
-        
-        # Draw border rectangle
-        draw.rectangle(
-            [0, 0, self.config.width - 1, self.config.height - 1],
-            outline=border_color,
-            width=border_width
-        )
+
     
     def _prepare_character_image(self, image: Image.Image, target_height: int) -> Image.Image:
         """
@@ -156,6 +152,217 @@ class CardDesigner:
             logger.warning(f"Could not add text to placeholder for {character.name}: {e}")
         
         return placeholder
+    
+    def _render_character_name_new_layout(self, draw: ImageDraw.Draw, name: str, y_position: int) -> int:
+        """
+        Render character name with new layout: large bold font (Heading 1 equivalent),
+        center aligned, 60% width constraint.
+        
+        Args:
+            draw: ImageDraw object for the card
+            name: Character name to render
+            y_position: Y position to start rendering
+            
+        Returns:
+            Y position after the rendered name
+        """
+        # 60% width constraint for text area
+        max_width = int(self.config.width * 0.6)
+        
+        # Use large font size (Heading 1 equivalent)
+        font_size = int(self.config.scaled_title_font_size * 1.2)  # Make it larger for Heading 1
+        font = self._get_font(font_size)
+        
+        # Check if name fits on one line within 60% width
+        bbox = draw.textbbox((0, 0), name, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        if text_width <= max_width:
+            # Single line - center it
+            text_x = (self.config.width - text_width) // 2
+            draw.text((text_x, y_position), name, fill=self.config.text_color, font=font)
+            return y_position + text_height
+        else:
+            # Try smaller font sizes if needed
+            for smaller_size in [font_size - 8, font_size - 16, font_size - 24]:
+                if smaller_size < 20:
+                    break
+                font = self._get_font(smaller_size)
+                bbox = draw.textbbox((0, 0), name, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+                
+                if text_width <= max_width:
+                    text_x = (self.config.width - text_width) // 2
+                    draw.text((text_x, y_position), name, fill=self.config.text_color, font=font)
+                    return y_position + text_height
+            
+            # If still too long, wrap text within 60% width
+            wrapped_lines = self._wrap_text(name, font, max_width, force=True)
+            return self._draw_wrapped_text_centered(draw, wrapped_lines[:2], font, y_position)
+    
+    def _render_tier_display(self, draw: ImageDraw.Draw, tier: str, y_position: int) -> int:
+        """
+        Render tier/rarity display with Heading 3 equivalent font, center aligned.
+        
+        Args:
+            draw: ImageDraw object for the card
+            tier: Tier name to display
+            y_position: Y position to start rendering
+            
+        Returns:
+            Y position after the rendered tier
+        """
+        # Heading 3 equivalent font size
+        font_size = int(self.config.scaled_title_font_size * 0.8)
+        font = self._get_font(font_size)
+        
+        # Get text dimensions
+        bbox = draw.textbbox((0, 0), tier, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Center align
+        text_x = (self.config.width - text_width) // 2
+        
+        # Use tier color for text
+        tier_color = TIER_COLORS.get(tier, self.config.text_color)
+        draw.text((text_x, y_position), tier, fill=tier_color, font=font)
+        
+        return y_position + text_height
+    
+    def _render_income_display(self, draw: ImageDraw.Draw, income: int, y_position: int) -> int:
+        """
+        Render income per second with Heading 5 bold font, center aligned,
+        formatted as "1 / sec" or "1b / sec".
+        
+        Args:
+            draw: ImageDraw object for the card
+            income: Income value to display
+            y_position: Y position to start rendering
+            
+        Returns:
+            Y position after the rendered income
+        """
+        # Heading 5 equivalent font size
+        font_size = int(self.config.scaled_stats_font_size * 0.9)
+        font = self._get_font(font_size)
+        
+        # Format income with appropriate scaling
+        income_text = self._format_income_value(income)
+        
+        # Get text dimensions
+        bbox = draw.textbbox((0, 0), income_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Center align
+        text_x = (self.config.width - text_width) // 2
+        draw.text((text_x, y_position), income_text, fill=self.config.text_color, font=font)
+        
+        return y_position + text_height
+    
+    def _render_cost_display(self, draw: ImageDraw.Draw, cost: int, y_position: int) -> int:
+        """
+        Render cost with Heading 5 bold font, center aligned,
+        formatted as "$100k" or "$1b".
+        
+        Args:
+            draw: ImageDraw object for the card
+            cost: Cost value to display
+            y_position: Y position to start rendering
+            
+        Returns:
+            Y position after the rendered cost
+        """
+        # Heading 5 equivalent font size
+        font_size = int(self.config.scaled_stats_font_size * 0.9)
+        font = self._get_font(font_size)
+        
+        # Format cost with appropriate scaling
+        cost_text = self._format_cost_value(cost)
+        
+        # Get text dimensions
+        bbox = draw.textbbox((0, 0), cost_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Center align
+        text_x = (self.config.width - text_width) // 2
+        draw.text((text_x, y_position), cost_text, fill=self.config.text_color, font=font)
+        
+        return y_position + text_height
+    
+    def _format_income_value(self, income: int) -> str:
+        """
+        Format income value with appropriate scaling (1 / sec, 1k / sec, 1b / sec).
+        
+        Args:
+            income: Income value to format
+            
+        Returns:
+            Formatted income string
+        """
+        if income >= 1_000_000_000:
+            formatted = f"{income / 1_000_000_000:.1f}".rstrip('0').rstrip('.')
+            return f"{formatted}b / sec"
+        elif income >= 1_000_000:
+            formatted = f"{income / 1_000_000:.1f}".rstrip('0').rstrip('.')
+            return f"{formatted}m / sec"
+        elif income >= 1_000:
+            formatted = f"{income / 1_000:.1f}".rstrip('0').rstrip('.')
+            return f"{formatted}k / sec"
+        else:
+            return f"{income} / sec"
+    
+    def _format_cost_value(self, cost: int) -> str:
+        """
+        Format cost value with appropriate scaling ($100k, $1b).
+        
+        Args:
+            cost: Cost value to format
+            
+        Returns:
+            Formatted cost string
+        """
+        if cost >= 1_000_000_000:
+            formatted = f"{cost / 1_000_000_000:.1f}".rstrip('0').rstrip('.')
+            return f"${formatted}b"
+        elif cost >= 1_000_000:
+            formatted = f"{cost / 1_000_000:.1f}".rstrip('0').rstrip('.')
+            return f"${formatted}m"
+        elif cost >= 1_000:
+            formatted = f"{cost / 1_000:.1f}".rstrip('0').rstrip('.')
+            return f"${formatted}k"
+        else:
+            return f"${cost}"
+    
+    def _draw_wrapped_text_centered(self, draw: ImageDraw.Draw, lines: list[str], font: FreeTypeFont, y_position: int) -> int:
+        """
+        Draw multiple lines of wrapped text with center alignment.
+        
+        Args:
+            draw: ImageDraw object
+            lines: List of text lines to draw
+            font: Font to use
+            y_position: Starting Y position
+            
+        Returns:
+            Y position after all lines
+        """
+        current_y = y_position
+        line_height = font.getbbox('Ay')[3] - font.getbbox('Ay')[1] + 5  # Add some line spacing
+        
+        for line in lines:
+            bbox = draw.textbbox((0, 0), line, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_x = (self.config.width - text_width) // 2
+            
+            draw.text((text_x, current_y), line, fill=self.config.text_color, font=font)
+            current_y += line_height
+        
+        return current_y
     
     def _render_character_name(self, draw: ImageDraw.Draw, name: str, y_position: int) -> int:
         """
@@ -269,64 +476,7 @@ class CardDesigner:
         
         return current_y + 10  # Extra spacing after name
     
-    def _render_stats_box(self, draw: ImageDraw.Draw, character: CharacterData, y_position: int) -> None:
-        """
-        Render the stats box with cost and income information.
-        
-        Args:
-            draw: ImageDraw object for the card
-            character: Character data to display
-            y_position: Y position for the stats box
-        """
-        font = self._get_font(self.config.scaled_stats_font_size)
-        
-        # Format stats text
-        cost_text = f"Cost: {character.cost:,}"
-        income_text = f"Income: {character.income:,}/s"
-        tier_text = f"Tier: {character.tier}"
-        
-        # Calculate stats box dimensions
-        max_width = self.config.width - (2 * self.config.scaled_margin)
-        box_padding = self.config.scaled_inner_margin
-        
-        # Get text dimensions
-        cost_bbox = draw.textbbox((0, 0), cost_text, font=font)
-        income_bbox = draw.textbbox((0, 0), income_text, font=font)
-        tier_bbox = draw.textbbox((0, 0), tier_text, font=font)
-        
-        line_height = max(cost_bbox[3] - cost_bbox[1], income_bbox[3] - income_bbox[1], tier_bbox[3] - tier_bbox[1])
-        
-        # Calculate box dimensions
-        box_width = max_width
-        box_height = (line_height * 3) + (box_padding * 4)  # 3 lines + padding
-        
-        box_x = self.config.scaled_margin
-        box_y = y_position
-        
-        # Draw stats box background with tier color
-        tier_color = TIER_COLORS.get(character.tier, self.config.border_color)
-        draw.rectangle(
-            [box_x, box_y, box_x + box_width, box_y + box_height],
-            fill=tier_color,
-            outline=self.config.text_color,
-            width=2
-        )
-        
-        # Draw stats text
-        text_color = '#FFFFFF' if tier_color != '#FFD700' else '#000000'  # White text except on gold
-        text_x = box_x + box_padding
-        
-        # Cost
-        current_y = box_y + box_padding
-        draw.text((text_x, current_y), cost_text, fill=text_color, font=font)
-        
-        # Income
-        current_y += line_height + 5
-        draw.text((text_x, current_y), income_text, fill=text_color, font=font)
-        
-        # Tier
-        current_y += line_height + 5
-        draw.text((text_x, current_y), tier_text, fill=text_color, font=font)
+
     
     def _get_font(self, size: int) -> FreeTypeFont:
         """
