@@ -2,6 +2,35 @@
 
 Quick reference for generating trading cards from Brainrot character data.
 
+## Image Download Commands (Required First Step)
+
+Before generating cards, you need to download character images from the wiki.
+
+### Download All Character Images
+```bash
+python download_images.py
+```
+Downloads character portrait images for all characters in the CSV database from the Steal a Brainrot Wiki.
+
+### Test Single Character Image Download
+```bash
+python tests/test_single.py "Character Name"
+```
+Test image download for a specific character (useful for debugging).
+
+### Test Multiple Character Downloads
+```bash
+python tests/test_single.py "Tim Cheese" "FluriFlura" "Trippi Troppi"
+```
+Test image downloads for multiple specific characters.
+
+**Note:** The image download process:
+- Automatically finds character wiki pages
+- Prioritizes main character portraits from infoboxes
+- Downloads high-quality images (skips thumbnails)
+- Saves images to the `images/` directory
+- Includes rate limiting to be respectful to the wiki server
+
 ## Basic Generation Commands
 
 ### Generate All Cards
