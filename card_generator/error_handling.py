@@ -35,6 +35,7 @@ class ErrorCategory(Enum):
     IMAGE_DOWNLOAD = "image_download"
     CSV_GENERATION = "csv_generation"
     RATE_LIMITING = "rate_limiting"
+    DATABASE_BUILDING = "database_building"
 
 
 class ErrorInfo:
