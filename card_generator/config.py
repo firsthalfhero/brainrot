@@ -26,9 +26,10 @@ class CardConfig:
     border_color: str = '#CCCCCC'
     border_width: int = 2  # pixels
     
-    # Typography
-    title_font_size: int = 48
-    stats_font_size: int = 36
+    # Typography (doubled sizes at 300 DPI for enhanced A5 format readability)
+    title_font_size: int = 96  # Doubled from 48pt for improved character name readability
+    tier_font_size: int = 72   # Doubled from 36pt for enhanced tier information visibility
+    stats_font_size: int = 48  # Doubled from 24pt for better income/cost text readability
     
     def __post_init__(self):
         """Validate configuration values after initialization."""
@@ -52,13 +53,19 @@ class CardConfig:
         
         if self.title_font_size < 20:
             raise ValueError("Title font size must be at least 20")
-        if self.title_font_size > 100:
-            raise ValueError("Title font size cannot exceed 100")
+        if self.title_font_size > 200:
+            raise ValueError("Title font size cannot exceed 200")
         
-        if self.stats_font_size < 16:
+        if self.stats_font_size < 16:  # Allow smaller base sizes, A5 compliance checked separately
             raise ValueError("Stats font size must be at least 16")
-        if self.stats_font_size > 80:
-            raise ValueError("Stats font size cannot exceed 80")
+        if self.stats_font_size > 120:
+            raise ValueError("Stats font size cannot exceed 120")
+        
+        # Tier font size validation (ensure it exists)
+        if self.tier_font_size < 24:  # Allow smaller base sizes, A5 compliance checked separately
+            raise ValueError("Tier font size must be at least 24")
+        if self.tier_font_size > 150:
+            raise ValueError("Tier font size cannot exceed 150")
     
     @property
     def width(self) -> int:
@@ -105,6 +112,50 @@ class CardConfig:
         """Calculate stats font size scaled to current DPI."""
         scale_factor = self.dpi / 300.0
         return int(self.stats_font_size * scale_factor)
+    
+    @property
+    def scaled_tier_font_size(self) -> int:
+        """Calculate tier font size scaled to current DPI."""
+        scale_factor = self.dpi / 300.0
+        return int(self.tier_font_size * scale_factor)
+    
+    def validate_a5_compliance(self) -> bool:
+        """
+        Validate that configuration meets A5 format compliance requirements.
+        
+        Returns:
+            True if configuration is compliant
+            
+        Raises:
+            ValueError: If configuration doesn't meet A5 requirements
+        """
+        # Check minimum font sizes at 300 DPI (doubled for enhanced readability)
+        if self.dpi == 300:
+            if self.title_font_size < 96:
+                raise ValueError("Character name font must be at least 96pt at 300 DPI for enhanced A5 readability")
+            if self.tier_font_size < 72:
+                raise ValueError("Tier font must be at least 72pt at 300 DPI for enhanced A5 readability")
+            if self.stats_font_size < 48:
+                raise ValueError("Stats font must be at least 48pt at 300 DPI for enhanced A5 readability")
+        else:
+            # Scale requirements for other DPI settings
+            scale_factor = self.dpi / 300.0
+            min_title = int(96 * scale_factor)
+            min_tier = int(72 * scale_factor)
+            min_stats = int(48 * scale_factor)
+            
+            if self.title_font_size < min_title:
+                raise ValueError(f"Character name font must be at least {min_title}pt at {self.dpi} DPI for enhanced A5 readability")
+            if self.tier_font_size < min_tier:
+                raise ValueError(f"Tier font must be at least {min_tier}pt at {self.dpi} DPI for enhanced A5 readability")
+            if self.stats_font_size < min_stats:
+                raise ValueError(f"Stats font must be at least {min_stats}pt at {self.dpi} DPI for enhanced A5 readability")
+        
+        # Check image height requirement (exactly 60%)
+        if abs(self.image_ratio - 0.6) > 0.001:
+            raise ValueError("Image must occupy exactly 60% of A5 card height for compliance")
+        
+        return True
 
 
 @dataclass 
@@ -273,16 +324,21 @@ class OutputConfig:
         return f"{filename}.{format_ext.lower()}"
 
 
-# Tier color mapping for visual consistency
+# Tier color mapping for visual consistency (based on game wiki)
 TIER_COLORS: Dict[str, str] = {
-    'Common': '#808080',      # Gray
-    'Rare': '#4169E1',        # Blue  
-    'Epic': '#8A2BE2',        # Purple
-    'Legendary': '#FF8C00',   # Orange
-    'Mythic': '#DC143C',      # Red
-    'Divine': '#FFD700',      # Gold
-    'Celestial': '#00FFFF',   # Cyan
-    'OG': '#FF1493',          # Deep Pink (placeholder for rainbow)
+    'Common': '#808080',        # Gray
+    'Rare': '#4169E1',          # Blue  
+    'Epic': '#8A2BE2',          # Purple
+    'Legendary': '#FF8C00',     # Orange
+    'Mythic': '#DC143C',        # Red
+    'Brainrot God': '#FFD700',  # Gold
+    'Secret': '#00FFFF',        # Cyan
+    'OG': '#FF1493',            # Deep Pink
+    'Admin': '#FF0000',         # Bright Red
+    'Taco': '#FFFF00',          # Yellow
+    # Legacy mapping for backwards compatibility
+    'Divine': '#FFD700',        # Gold (maps to Brainrot God)
+    'Celestial': '#00FFFF',     # Cyan (maps to Secret)
 }
 
 # Default file paths
