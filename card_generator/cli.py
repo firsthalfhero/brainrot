@@ -9,11 +9,12 @@ import time
 from typing import List, Dict, Any, Optional
 from .data_loader import CSVDataLoader
 from .character_selector import CharacterSelector
-from .config import CardConfig, PrintConfig, OutputConfig, ConfigurationManager
+from .config import CardConfig, PrintConfig, OutputConfig, ConfigurationManager, DatabaseBuilderConfig
 from .image_processor import ImageProcessor
 from .card_designer import CardDesigner
 from .print_layout import PrintLayoutManager
 from .output_manager import OutputManager
+from .database_builder import DatabaseBuilder
 
 
 class CardGeneratorCLI:
@@ -279,6 +280,57 @@ Examples:
             help='Show detailed progress information'
         )
         
+        # Database builder options
+        db_group = parser.add_argument_group('Database Builder')
+        db_group.add_argument(
+            '--build-database',
+            action='store_true',
+            help='Build character database by scraping wiki data'
+        )
+        db_group.add_argument(
+            '--wiki-url',
+            metavar='URL',
+            default='https://stealabrainrot.fandom.com',
+            help='Base URL for the wiki (default: https://stealabrainrot.fandom.com)'
+        )
+        db_group.add_argument(
+            '--databases-dir',
+            metavar='DIR',
+            default='databases',
+            help='Directory for generated database files (default: databases)'
+        )
+        db_group.add_argument(
+            '--rate-limit',
+            type=float,
+            metavar='SECONDS',
+            default=2.0,
+            help='Delay between wiki requests in seconds (default: 2.0)'
+        )
+        db_group.add_argument(
+            '--max-retries',
+            type=int,
+            metavar='COUNT',
+            default=3,
+            help='Maximum retries for failed requests (default: 3)'
+        )
+        db_group.add_argument(
+            '--timeout',
+            type=int,
+            metavar='SECONDS',
+            default=30,
+            help='Request timeout in seconds (default: 30)'
+        )
+        db_group.add_argument(
+            '--skip-images',
+            action='store_true',
+            help='Skip image downloading during database building'
+        )
+        db_group.add_argument(
+            '--validate-csv',
+            action='store_true',
+            help='Validate generated CSV format'
+        )
+        
         return parser
     
     def parse_selection_criteria(self, args: argparse.Namespace) -> Dict[str, Any]:
@@ -373,8 +425,12 @@ Examples:
             args.stats, args.preview
         ]
         
-        if not any(selection_methods) and not any(info_methods):
-            print("Error: Must specify at least one selection method or information option")
+        database_methods = [
+            args.build_database
+        ]
+        
+        if not any(selection_methods) and not any(info_methods) and not any(database_methods):
+            print("Error: Must specify at least one selection method, information option, or database builder option")
             return False
         
         return True
@@ -467,6 +523,170 @@ Examples:
         print(f"  Tiers: {', '.join(f'{tier}({count})' for tier, count in summary['tiers'].items())}")
         
         return characters
+    
+    def build_database(self, args: argparse.Namespace) -> int:
+        """
+        Build character database by scraping wiki data.
+        
+        Args:
+            args: Parsed command-line arguments
+            
+        Returns:
+            Exit code (0 for success, non-zero for error)
+        """
+        try:
+            # Setup logging
+            log_level = logging.DEBUG if args.verbose else logging.INFO if not args.quiet else logging.WARNING
+            logging.basicConfig(
+                level=log_level,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            
+            logger = logging.getLogger(__name__)
+            
+            if not args.quiet:
+                print("Starting database build process...")
+                print("=" * 50)
+            
+            # Create database builder configuration
+            db_config = DatabaseBuilderConfig(
+                base_url=args.wiki_url,
+                output_dir=args.databases_dir,
+                images_dir=args.images_dir,
+                rate_limit_delay=args.rate_limit,
+                max_retries=args.max_retries,
+                timeout=args.timeout,
+                skip_existing_images=not args.skip_images,  # Invert logic: skip_images means don't skip existing
+                validate_images=args.validate_csv  # Reuse validate_csv flag for image validation
+            )
+            
+            # Initialize database builder
+            database_builder = DatabaseBuilder(db_config)
+            
+            # Progress reporting setup
+            start_time = time.time()
+            last_progress_time = start_time
+            
+            def log_progress():
+                nonlocal last_progress_time
+                current_time = time.time()
+                
+                # Only log progress every 30 seconds to avoid spam
+                if current_time - last_progress_time >= 30.0 or args.verbose:
+                    progress_info = database_builder.get_progress_info()
+                    
+                    if not args.quiet:
+                        if progress_info['current_tier']:
+                            print(f"Processing tier: {progress_info['current_tier']}")
+                        
+                        if progress_info['current_character']:
+                            print(f"Current character: {progress_info['current_character']}")
+                        
+                        progress_pct = progress_info['progress_percentage']
+                        processed = progress_info['characters_processed']
+                        total = progress_info['total_characters']
+                        
+                        print(f"Progress: {progress_pct:.1f}% ({processed}/{total} characters)")
+                        
+                        if progress_info['estimated_remaining_time']:
+                            eta_minutes = progress_info['estimated_remaining_time'] / 60
+                            print(f"Estimated time remaining: {eta_minutes:.1f} minutes")
+                        
+                        print(f"Successful extractions: {progress_info['successful_extractions']}")
+                        print(f"Failed extractions: {progress_info['failed_extractions']}")
+                        print(f"Images downloaded: {progress_info['images_downloaded']}")
+                        print(f"Image failures: {progress_info['images_failed']}")
+                        print("-" * 30)
+                    
+                    last_progress_time = current_time
+            
+            # Execute database building
+            if not args.quiet:
+                print(f"Configuration:")
+                print(f"  Wiki URL: {db_config.base_url}")
+                print(f"  Output directory: {db_config.output_dir}")
+                print(f"  Images directory: {db_config.images_dir}")
+                print(f"  Rate limit: {db_config.rate_limit_delay}s between requests")
+                print(f"  Max retries: {db_config.max_retries}")
+                print(f"  Skip existing images: {db_config.skip_existing_images}")
+                print()
+            
+            # Start the build process
+            try:
+                result = database_builder.build_database()
+                
+                # Report final results
+                elapsed_time = time.time() - start_time
+                
+                if not args.quiet:
+                    print("\n" + "=" * 50)
+                    print("DATABASE BUILD COMPLETED")
+                    print("=" * 50)
+                    print(f"Processing time: {elapsed_time:.1f} seconds")
+                    print(f"Total characters: {result.total_characters}")
+                    print(f"Successful extractions: {result.successful_extractions}")
+                    print(f"Failed extractions: {result.failed_extractions}")
+                    print(f"Success rate: {result.get_success_rate():.1f}%")
+                    print()
+                    print(f"Images downloaded: {result.images_downloaded}")
+                    print(f"Image failures: {result.images_failed}")
+                    print(f"Image success rate: {result.get_image_success_rate():.1f}%")
+                    print()
+                    print(f"Generated database: {result.csv_file_path}")
+                    print()
+                    
+                    # Show tier-by-tier statistics
+                    if result.tier_statistics:
+                        print("Tier Statistics:")
+                        print("-" * 50)
+                        for tier, stats in result.tier_statistics.items():
+                            success_rate = (stats['successful'] / stats['total']) * 100 if stats['total'] > 0 else 0
+                            image_total = stats['images_downloaded'] + stats['images_failed']
+                            image_rate = (stats['images_downloaded'] / image_total) * 100 if image_total > 0 else 0
+                            
+                            print(f"{tier:15} | {stats['successful']:3}/{stats['total']:3} chars ({success_rate:5.1f}%) | {stats['images_downloaded']:3} images ({image_rate:5.1f}%)")
+                        print()
+                    
+                    # Show warnings and errors summary
+                    if result.warnings:
+                        print(f"Warnings: {len(result.warnings)}")
+                        if args.verbose:
+                            for warning in result.warnings[:10]:  # Show first 10 warnings
+                                print(f"  ⚠ {warning}")
+                            if len(result.warnings) > 10:
+                                print(f"  ... and {len(result.warnings) - 10} more warnings")
+                        print()
+                    
+                    if result.errors:
+                        print(f"Errors: {len(result.errors)}")
+                        if args.verbose:
+                            for error in result.errors[:10]:  # Show first 10 errors
+                                print(f"  ✗ {error}")
+                            if len(result.errors) > 10:
+                                print(f"  ... and {len(result.errors) - 10} more errors")
+                        print()
+                    
+                    print("Database build completed successfully!")
+                    print(f"You can now use the generated database: {result.csv_file_path}")
+                
+                # Return appropriate exit code
+                if result.failed_extractions > 0 or result.errors:
+                    logger.warning(f"Build completed with {result.failed_extractions} failed extractions and {len(result.errors)} errors")
+                    return 1 if result.failed_extractions > result.successful_extractions else 0
+                else:
+                    return 0
+                
+            except KeyboardInterrupt:
+                print("\nDatabase build interrupted by user")
+                logger.info("Database build cancelled by user")
+                return 130
+                
+        except Exception as e:
+            if args.verbose:
+                logging.exception("Database build failed")
+            else:
+                print(f"Error: Database build failed: {e}")
+            return 1
     
     def generate_cards(self, args: argparse.Namespace) -> int:
         """
@@ -709,6 +929,10 @@ Examples:
             return 1
         
         try:
+            # Handle database builder
+            if parsed_args.build_database:
+                return self.build_database(parsed_args)
+            
             # Handle info commands
             if self.handle_info_commands(parsed_args):
                 return 0

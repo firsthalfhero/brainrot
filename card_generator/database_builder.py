@@ -446,8 +446,8 @@ class DatabaseBuilder:
             
             csv_path = self.csv_generator.generate_csv(valid_characters)
             
-            # Validate the generated CSV
-            if self.config.validate_csv_output:
+            # Validate the generated CSV if image validation is enabled
+            if self.config.validate_images:
                 self.csv_generator.validate_csv_format(csv_path)
                 self.logger.info("CSV format validation passed")
             

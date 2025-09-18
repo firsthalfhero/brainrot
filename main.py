@@ -101,6 +101,7 @@ def show_quick_help() -> None:
     print("  python main.py --all                    # Generate cards for all characters")
     print("  python main.py --names \"Tim Cheese\"     # Generate card for specific character")
     print("  python main.py --tiers Common Rare      # Generate cards for specific tiers")
+    print("  python main.py --build-database         # Build database from wiki")
     print("  python main.py --list-characters        # List all available characters")
     print("  python main.py --help                   # Show full help")
     print()
@@ -132,7 +133,9 @@ def main() -> int:
             show_welcome_message()
         
         # Check environment before proceeding with any operations
-        if not any(arg in sys.argv for arg in ['--help', '-h', '--version']):
+        # Skip environment check for database builder and help commands
+        skip_env_check = any(arg in sys.argv for arg in ['--help', '-h', '--version', '--build-database'])
+        if not skip_env_check:
             if not check_environment():
                 return 1
         

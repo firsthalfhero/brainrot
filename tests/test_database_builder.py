@@ -234,11 +234,16 @@ class TestDatabaseBuilder(unittest.TestCase):
     
     def test_get_progress_info(self):
         """Test progress information retrieval."""
+        import time
+        
         builder = DatabaseBuilder(self.config)
         builder.progress.current_tier = "Common"
         builder.progress.current_character = "TestCharacter"
         builder.progress.characters_processed = 5
         builder.progress.total_characters = 20
+        
+        # Wait a tiny bit to ensure elapsed time > 0 to avoid division by zero
+        time.sleep(0.001)
         
         progress_info = builder.get_progress_info()
         
