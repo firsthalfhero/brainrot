@@ -29,6 +29,12 @@ class ErrorCategory(Enum):
     VALIDATION = "validation"
     NETWORK = "network"
     CONFIGURATION = "configuration"
+    # Database builder specific categories
+    WIKI_SCRAPING = "wiki_scraping"
+    CHARACTER_EXTRACTION = "character_extraction"
+    IMAGE_DOWNLOAD = "image_download"
+    CSV_GENERATION = "csv_generation"
+    RATE_LIMITING = "rate_limiting"
 
 
 class ErrorInfo:
@@ -179,6 +185,41 @@ class ErrorHandler:
                 "Check available disk space",
                 "Verify directory write permissions",
                 "Ensure output paths are valid"
+            ])
+        elif category == ErrorCategory.WIKI_SCRAPING:
+            suggestions.extend([
+                "Check internet connection",
+                "Verify wiki URL is accessible",
+                "Check if wiki structure has changed",
+                "Try again later if server is temporarily unavailable"
+            ])
+        elif category == ErrorCategory.CHARACTER_EXTRACTION:
+            suggestions.extend([
+                "Verify character page exists on wiki",
+                "Check if character name spelling is correct",
+                "Try alternative character page URLs",
+                "Check if wiki page structure has changed"
+            ])
+        elif category == ErrorCategory.IMAGE_DOWNLOAD:
+            suggestions.extend([
+                "Check internet connection",
+                "Verify image URL is accessible",
+                "Check available disk space for images",
+                "Ensure images directory has write permissions"
+            ])
+        elif category == ErrorCategory.CSV_GENERATION:
+            suggestions.extend([
+                "Check available disk space",
+                "Verify output directory write permissions",
+                "Ensure CSV data is properly formatted",
+                "Check for invalid characters in data"
+            ])
+        elif category == ErrorCategory.RATE_LIMITING:
+            suggestions.extend([
+                "Increase delay between requests",
+                "Wait before retrying requests",
+                "Check if IP is temporarily blocked",
+                "Reduce concurrent request load"
             ])
         
         return suggestions

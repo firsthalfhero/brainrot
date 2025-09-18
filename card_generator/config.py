@@ -346,6 +346,201 @@ DEFAULT_CSV_PATH = 'steal_a_brainrot_complete_database.csv'
 DEFAULT_IMAGES_DIR = 'images/'
 
 
+@dataclass
+class DatabaseBuilderConfig:
+    """Configuration for database builder functionality."""
+    
+    # Wiki scraping settings
+    base_url: str = "https://stealabrainrot.fandom.com"
+    brainrots_page_path: str = "/wiki/Brainrots"
+    
+    # Output directories
+    output_dir: str = "databases"
+    images_dir: str = "images"
+    
+    # Network settings
+    rate_limit_delay: float = 2.0  # seconds between requests
+    max_retries: int = 3
+    timeout: int = 30  # seconds
+    retry_backoff_factor: float = 2.0  # exponential backoff multiplier
+    
+    # User agent for respectful scraping
+    user_agent: str = "TradingCardGenerator/1.0 (Educational/Research Tool)"
+    
+    # CSV generation settings
+    csv_filename_template: str = "brainrot_database_{timestamp}.csv"
+    include_timestamp: bool = True
+    
+    # Tier mappings based on wiki structure
+    tier_headings: Dict[str, str] = None
+    
+    # Processing options
+    skip_existing_images: bool = True  # Skip downloading if image already exists
+    validate_images: bool = True  # Validate downloaded images
+    continue_on_error: bool = True  # Continue processing other characters on individual failures
+    
+    def __post_init__(self):
+        """Validate configuration values after initialization."""
+        # Set default tier headings if not provided
+        if self.tier_headings is None:
+            self.tier_headings = {
+                'Common': 'Common',
+                'Rare': 'Rare',
+                'Epic': 'Epic',
+                'Legendary': 'Legendary',
+                'Mythic': 'Mythic',
+                'Brainrot God': 'Brainrot God',
+                'Secret': 'Secret',
+                'OG': 'OG'
+            }
+        
+        # Validate network settings
+        if self.rate_limit_delay < 0.5:
+            raise ValueError("Rate limit delay must be at least 0.5 seconds for respectful scraping")
+        if self.rate_limit_delay > 60:
+            raise ValueError("Rate limit delay cannot exceed 60 seconds")
+        
+        if self.max_retries < 1:
+            raise ValueError("Max retries must be at least 1")
+        if self.max_retries > 10:
+            raise ValueError("Max retries cannot exceed 10")
+        
+        if self.timeout < 5:
+            raise ValueError("Timeout must be at least 5 seconds")
+        if self.timeout > 300:
+            raise ValueError("Timeout cannot exceed 300 seconds")
+        
+        if self.retry_backoff_factor < 1.0:
+            raise ValueError("Retry backoff factor must be at least 1.0")
+        if self.retry_backoff_factor > 10.0:
+            raise ValueError("Retry backoff factor cannot exceed 10.0")
+        
+        # Validate paths
+        if not self.output_dir:
+            raise ValueError("Output directory cannot be empty")
+        if not self.images_dir:
+            raise ValueError("Images directory cannot be empty")
+        
+        # Validate URL components
+        if not self.base_url.startswith(('http://', 'https://')):
+            raise ValueError("Base URL must start with http:// or https://")
+        if not self.brainrots_page_path.startswith('/'):
+            raise ValueError("Brainrots page path must start with /")
+        
+        # Validate filename template
+        if not self.csv_filename_template:
+            raise ValueError("CSV filename template cannot be empty")
+        if self.include_timestamp and '{timestamp}' not in self.csv_filename_template:
+            raise ValueError("CSV filename template must contain {timestamp} when include_timestamp is True")
+    
+    @property
+    def full_brainrots_url(self) -> str:
+        """Get the complete URL for the brainrots page."""
+        return f"{self.base_url.rstrip('/')}{self.brainrots_page_path}"
+    
+    @property
+    def request_headers(self) -> Dict[str, str]:
+        """Get HTTP headers for requests."""
+        return {
+            'User-Agent': self.user_agent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+    
+    def get_csv_filename(self, timestamp: Optional[str] = None) -> str:
+        """
+        Generate CSV filename with optional timestamp.
+        
+        Args:
+            timestamp: Optional timestamp string, will generate current if None
+            
+        Returns:
+            Generated filename
+        """
+        if self.include_timestamp:
+            if timestamp is None:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            return self.csv_filename_template.format(timestamp=timestamp)
+        else:
+            return self.csv_filename_template.replace('_{timestamp}', '').replace('{timestamp}_', '').replace('{timestamp}', '')
+    
+    def get_retry_delay(self, attempt: int) -> float:
+        """
+        Calculate retry delay with exponential backoff.
+        
+        Args:
+            attempt: Current retry attempt (0-based)
+            
+        Returns:
+            Delay in seconds
+        """
+        base_delay = self.rate_limit_delay
+        backoff_delay = base_delay * (self.retry_backoff_factor ** attempt)
+        return min(backoff_delay, 60.0)  # Cap at 60 seconds
+
+
+def validate_database_directories(config: 'DatabaseBuilderConfig') -> bool:
+    """
+    Validate and create necessary directories for database builder.
+    
+    Args:
+        config: DatabaseBuilderConfig instance
+        
+    Returns:
+        True if directories are valid and accessible
+        
+    Raises:
+        ValueError: If directories cannot be created or accessed
+        PermissionError: If insufficient permissions
+    """
+    import os
+    from pathlib import Path
+    
+    # Validate and create output directory
+    output_path = Path(config.output_dir)
+    try:
+        output_path.mkdir(parents=True, exist_ok=True)
+    except PermissionError as e:
+        raise PermissionError(f"Cannot create output directory '{config.output_dir}': {e}")
+    except OSError as e:
+        raise ValueError(f"Invalid output directory path '{config.output_dir}': {e}")
+    
+    # Test write permissions
+    test_file = output_path / '.write_test'
+    try:
+        test_file.write_text('test')
+        test_file.unlink()
+    except PermissionError as e:
+        raise PermissionError(f"No write permission for output directory '{config.output_dir}': {e}")
+    except OSError as e:
+        raise ValueError(f"Cannot write to output directory '{config.output_dir}': {e}")
+    
+    # Validate and create images directory
+    images_path = Path(config.images_dir)
+    try:
+        images_path.mkdir(parents=True, exist_ok=True)
+    except PermissionError as e:
+        raise PermissionError(f"Cannot create images directory '{config.images_dir}': {e}")
+    except OSError as e:
+        raise ValueError(f"Invalid images directory path '{config.images_dir}': {e}")
+    
+    # Test write permissions for images directory
+    test_file = images_path / '.write_test'
+    try:
+        test_file.write_text('test')
+        test_file.unlink()
+    except PermissionError as e:
+        raise PermissionError(f"No write permission for images directory '{config.images_dir}': {e}")
+    except OSError as e:
+        raise ValueError(f"Cannot write to images directory '{config.images_dir}': {e}")
+    
+    return True
+
+
 class ConfigurationManager:
     """Manager for creating and validating configuration objects."""
     
@@ -513,3 +708,68 @@ class ConfigurationManager:
                 f"Card DPI ({card_config.dpi}) must match print DPI ({print_config.dpi})"
             )
         return True
+    
+    @staticmethod
+    def create_database_builder_config(
+        base_url: Optional[str] = None,
+        output_dir: Optional[str] = None,
+        images_dir: Optional[str] = None,
+        rate_limit_delay: Optional[float] = None,
+        max_retries: Optional[int] = None,
+        timeout: Optional[int] = None,
+        skip_existing_images: Optional[bool] = None,
+        validate_images: Optional[bool] = None,
+        continue_on_error: Optional[bool] = None,
+        **kwargs
+    ) -> 'DatabaseBuilderConfig':
+        """
+        Create a DatabaseBuilderConfig with optional overrides.
+        
+        Args:
+            base_url: Base URL for wiki scraping
+            output_dir: Directory for database output files
+            images_dir: Directory for downloaded images
+            rate_limit_delay: Delay between requests in seconds
+            max_retries: Maximum number of retry attempts
+            timeout: Request timeout in seconds
+            skip_existing_images: Whether to skip downloading existing images
+            validate_images: Whether to validate downloaded images
+            continue_on_error: Whether to continue on individual character errors
+            **kwargs: Additional configuration options
+            
+        Returns:
+            Configured DatabaseBuilderConfig instance
+            
+        Raises:
+            ValueError: If any configuration value is invalid
+        """
+        config_dict = {}
+        
+        if base_url is not None:
+            config_dict['base_url'] = base_url
+        if output_dir is not None:
+            config_dict['output_dir'] = output_dir
+        if images_dir is not None:
+            config_dict['images_dir'] = images_dir
+        if rate_limit_delay is not None:
+            config_dict['rate_limit_delay'] = rate_limit_delay
+        if max_retries is not None:
+            config_dict['max_retries'] = max_retries
+        if timeout is not None:
+            config_dict['timeout'] = timeout
+        if skip_existing_images is not None:
+            config_dict['skip_existing_images'] = skip_existing_images
+        if validate_images is not None:
+            config_dict['validate_images'] = validate_images
+        if continue_on_error is not None:
+            config_dict['continue_on_error'] = continue_on_error
+        
+        # Add any additional kwargs
+        config_dict.update(kwargs)
+        
+        config = DatabaseBuilderConfig(**config_dict)
+        
+        # Validate directories
+        validate_database_directories(config)
+        
+        return config

@@ -2,8 +2,9 @@
 Data models for the Trading Card Generator.
 """
 
-from typing import Optional
-from dataclasses import dataclass
+from typing import Optional, List
+from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass
@@ -18,6 +19,13 @@ class CharacterData:
         income: Income per second value
         variant: Standard/Special variant indicator
         image_path: Path to character image file (set after image matching)
+        
+        # Additional fields for database building
+        wiki_url: URL to the character's wiki page
+        image_url: URL to the character's image on the wiki
+        extraction_timestamp: When the data was extracted
+        extraction_success: Whether extraction was successful
+        extraction_errors: List of errors encountered during extraction
     """
     name: str
     tier: str
@@ -25,6 +33,13 @@ class CharacterData:
     income: int
     variant: str
     image_path: Optional[str] = None
+    
+    # New fields for database building
+    wiki_url: Optional[str] = None
+    image_url: Optional[str] = None
+    extraction_timestamp: Optional[datetime] = None
+    extraction_success: bool = True
+    extraction_errors: List[str] = field(default_factory=list)
     
     def __post_init__(self):
         """Validate character data after initialization."""
