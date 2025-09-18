@@ -2,7 +2,48 @@
 
 Quick reference for generating trading cards from Brainrot character data.
 
-## Image Download Commands (Required First Step)
+## Database Builder Commands (Optional First Step)
+
+Build a fresh character database by scraping the Steal a Brainrot Wiki.
+
+### Build Complete Database
+```bash
+python main.py --build-database
+```
+Scrapes the wiki to build a complete character database with images.
+
+### Build Database with Custom Settings
+```bash
+python main.py --build-database --wiki-url https://stealabrainrot.fandom.com --databases-dir my_databases --rate-limit 1.5
+```
+
+### Build Database Without Images
+```bash
+python main.py --build-database --skip-images
+```
+Build database with character data only, skip image downloads.
+
+### Build Database with Validation
+```bash
+python main.py --build-database --validate-csv --verbose
+```
+Build database with CSV validation and detailed progress output.
+
+### Build Database with Custom Network Settings
+```bash
+python main.py --build-database --max-retries 5 --timeout 60 --rate-limit 3.0
+```
+
+**Database Builder Options:**
+- `--wiki-url URL` - Base URL for the wiki (default: https://stealabrainrot.fandom.com)
+- `--databases-dir DIR` - Directory for generated database files (default: databases)
+- `--rate-limit SECONDS` - Delay between wiki requests (default: 2.0)
+- `--max-retries COUNT` - Maximum retries for failed requests (default: 3)
+- `--timeout SECONDS` - Request timeout in seconds (default: 30)
+- `--skip-images` - Skip image downloading during database building
+- `--validate-csv` - Validate generated CSV format
+
+## Image Download Commands (Alternative Method)
 
 Before generating cards, you need to download character images from the wiki.
 
@@ -208,6 +249,24 @@ python main.py --all --quiet
 
 ## Common Workflows
 
+### Complete Database Build and Card Generation
+```bash
+# Step 1: Build fresh database from wiki
+python main.py --build-database --verbose
+
+# Step 2: Generate cards from new database
+python main.py --all --format both --dpi 300
+```
+
+### Quick Database Update
+```bash
+# Build database without images (faster)
+python main.py --build-database --skip-images --quiet
+
+# Generate cards using existing images
+python main.py --all --with-images-only
+```
+
 ### Quick Test Run
 ```bash
 python main.py --names "Tim Cheese" --preview
@@ -241,7 +300,21 @@ python main.py --help
 python main.py
 ```
 
-## File Structure After Generation
+## File Structure After Database Build
+
+```
+databases/
+├── brainrot_database_20241218_143022.csv
+└── ...
+
+images/
+├── Tim_Cheese.jpg
+├── FluriFlura.png
+├── Trippi_Troppi.jpg
+└── ...
+```
+
+## File Structure After Card Generation
 
 ```
 output/
