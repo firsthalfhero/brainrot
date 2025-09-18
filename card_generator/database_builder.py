@@ -17,6 +17,7 @@ from .character_data_extractor import CharacterDataExtractor
 from .image_downloader import ImageDownloader
 from .csv_generator import CSVGenerator
 from .data_models import CharacterData
+from .data_validator import DataValidator
 from .error_handling import ErrorHandler, ErrorCategory, ErrorSeverity
 
 
@@ -116,6 +117,7 @@ class DatabaseBuilder:
         self.character_extractor = CharacterDataExtractor(self.config.base_url)
         self.image_downloader = ImageDownloader(self.config)
         self.csv_generator = CSVGenerator(self.config)
+        self.data_validator = DataValidator(strict_mode=self.config.strict_validation, timeout=self.config.timeout)
         
         # Progress tracking
         self.progress = ProcessingProgress()
@@ -168,13 +170,17 @@ class DatabaseBuilder:
             self.logger.info("Step 2: Processing tiers and extracting character data")
             all_characters = self._process_all_tiers(tier_data)
             
-            # Step 3: Download character images
-            self.logger.info("Step 3: Downloading character images")
-            self._download_character_images(all_characters)
+            # Step 3: Validate and normalize character data
+            self.logger.info("Step 3: Validating and normalizing character data")
+            validated_characters = self._validate_character_data(all_characters)
             
-            # Step 4: Generate CSV database file
-            self.logger.info("Step 4: Generating CSV database file")
-            csv_path = self._generate_csv_database(all_characters)
+            # Step 4: Download character images
+            self.logger.info("Step 4: Downloading character images")
+            self._download_character_images(validated_characters)
+            
+            # Step 5: Generate CSV database file
+            self.logger.info("Step 5: Generating CSV database file")
+            csv_path = self._generate_csv_database(validated_characters)
             self.build_result.csv_file_path = csv_path
             
             # Calculate final statistics
@@ -359,6 +365,78 @@ class DatabaseBuilder:
         
         return tier_characters
     
+    def _validate_character_data(self, characters: List[CharacterData]) -> List[CharacterData]:
+        """
+        Validate and normalize character data using the DataValidator.
+        
+        Args:
+            characters: List of CharacterData objects to validate
+            
+        Returns:
+            List of validated and normalized CharacterData objects
+        """
+        try:
+            self.logger.info(f"Validating {len(characters)} characters")
+            
+            # Perform comprehensive validation
+            validation_result = self.data_validator.validate_character_list(characters)
+            
+            # Log validation results
+            if validation_result.is_valid:
+                self.logger.info("Character data validation passed")
+            else:
+                self.logger.warning(f"Character data validation found {len(validation_result.errors)} errors")
+                
+                # Add validation errors to build result
+                for error in validation_result.errors:
+                    self.build_result.errors.append(f"Validation error: {error}")
+            
+            # Log validation warnings
+            if validation_result.warnings:
+                self.logger.info(f"Character data validation found {len(validation_result.warnings)} warnings")
+                
+                # Add validation warnings to build result
+                for warning in validation_result.warnings:
+                    self.build_result.warnings.append(f"Validation warning: {warning}")
+            
+            # Log validation statistics
+            validation_stats = self.data_validator.get_validation_statistics()
+            stats = validation_stats['validation_stats']
+            
+            self.logger.info(f"Validation statistics:")
+            self.logger.info(f"  - Names normalized: {stats['names_normalized']}")
+            self.logger.info(f"  - Numeric corrections: {stats['numeric_corrections']}")
+            self.logger.info(f"  - URL validations: {stats['url_validations']}")
+            self.logger.info(f"  - Duplicates found: {stats['duplicates_found']}")
+            
+            # Log duplicate information
+            duplicates = validation_result.metadata.get('duplicate_info', [])
+            if duplicates:
+                self.logger.warning(f"Found {len(duplicates)} duplicate groups:")
+                for i, dup in enumerate(duplicates):
+                    char_names = [characters[idx].name for idx in [dup.original_index] + dup.duplicate_indices]
+                    self.logger.warning(f"  Group {i+1} ({dup.duplicate_type}): {', '.join(char_names)}")
+            
+            # Return normalized data if available, otherwise original data
+            if validation_result.normalized_data:
+                self.logger.info("Using normalized character data")
+                return validation_result.normalized_data
+            else:
+                self.logger.info("Using original character data (no normalization needed)")
+                return characters
+                
+        except Exception as e:
+            self.error_handler.handle_error(
+                e, ErrorCategory.DATA_VALIDATION, ErrorSeverity.MEDIUM,
+                context={'character_count': len(characters)}
+            )
+            
+            self.logger.warning(f"Character data validation failed: {e}")
+            self.build_result.warnings.append(f"Data validation failed: {str(e)}")
+            
+            # Return original data if validation fails
+            return characters
+    
     def _download_character_images(self, characters: List[CharacterData]) -> None:
         """
         Download images for all characters with proper error handling.
@@ -503,6 +581,9 @@ class DatabaseBuilder:
             
             if hasattr(self.character_extractor, 'close'):
                 self.character_extractor.close()
+            
+            if hasattr(self.data_validator, 'close'):
+                self.data_validator.close()
             
             self.logger.debug("Resources cleaned up successfully")
             

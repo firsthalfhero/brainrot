@@ -27,6 +27,7 @@ class ErrorCategory(Enum):
     IMAGE_PROCESSING = "image_processing"
     FILE_SYSTEM = "file_system"
     VALIDATION = "validation"
+    DATA_VALIDATION = "data_validation"
     NETWORK = "network"
     CONFIGURATION = "configuration"
     # Database builder specific categories

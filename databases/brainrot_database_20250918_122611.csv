@@ -1,0 +1,140 @@
+Character Name,Tier,Cost,Income per Second,Variant Type,Image Path
+Noobini Pizzanini,Common,25,1,Standard,images\Noobini Pizzanini.png
+Lirilì Larilà,Common,250,3,Standard,images\Lirilì Larilà.png
+Tim Cheese,Common,500,5,Standard,images\Tim Cheese.png
+Fluriflura,Common,750,7,Standard,images\Fluriflura.png
+Talpa Di Fero,Common,1000,9,Standard,images\Talpa Di Fero.png
+Svinina Bombardino,Common,1200,9,Standard,images\Svinina Bombardino.png
+Pipi Kiwi,Common,1500,13,Standard,images\Pipi Kiwi.png
+Pipi Corni,Common,7000,14,Standard,images\Pipi Corni.png
+Trippi Troppi,Rare,2000,15,Standard,images\Trippi Troppi Troppa Trippa.png
+Gangster Footera,Rare,4000,30,Standard,images\Gangster Footera.png
+Bandito Bobritto,Rare,5000,35,Standard,images\Bandito Bobritto.png
+Boneca Ambalabu,Rare,5000,40,Standard,images\Boneca Ambalabu.png
+Cacto Hipopotamo,Rare,6500,50,Standard,images\Cacto Hipopotamo.png
+Ta Ta Ta Ta Sahur,Rare,5000,55,Standard,images\Ta Ta Ta Ta Sahur.png
+Tric-Trac-Baraboom,Rare,9000,65,Standard,images\Tric-Trac-Baraboom.png
+Pipi Avocado,Rare,9500,70,Standard,images\Pipi Avocado.png
+Cappuccino Assassino,Epic,10000,75,Standard,images\Cappuccino Assassino.png
+Bandito Axolito,Epic,5000,90,Standard,images\Bandito Axolito.png
+Brr Brr Patapim,Epic,15000,100,Standard,images\Brr Brr Patapim.png
+Avocadini Antilopini,Epic,17500,115,Standard,images\Avocadini Antilopini.png
+Trulimero Trulicina,Epic,20000,125,Standard,images\Trulimero Trulicina.png
+Bambini Crostini,Epic,22500,120,Standard,images\Bambini Crostini.png
+Malame Amarele,Epic,5000,140,Standard,images\Malame Amarele.png
+Bananita Dolphinita,Epic,25000,150,Standard,images\Bananita Dolphinita.png
+Perochello Lemonchello,Epic,27500,160,Standard,images\Perochello Lemonchello.png
+Brri Brri Bicus Dicus Bombicus,Epic,30000,175,Standard,images\Brri Brri Bicus Dicus Bombicus.png
+Ti Ti Ti Sahur,Epic,37500,225,Standard,images\Ti Ti Ti Sahur.png
+Avocadini Guffo,Epic,35000,225,Standard,images\Avocadini Guffo.png
+Mangolini Parrocini,Epic,5000,235,Standard,images\Mangolini Parrocini.png
+Salamino Penguino,Epic,40000,250,Standard,
+Penguino Cocosino,Epic,45000,300,Standard,
+Burbaloni Loliloli,Legendary,35000,200,Standard,images\Burbaloni Loliloli.png
+Chimpanzini Bananini,Legendary,50000,300,Standard,images\Chimpanzini Bananini.png
+Tirilikalika Tirilikalako,Legendary,75000,450,Standard,images\Tirilikalika Tirilikalako.png
+Ballerina Cappuccina,Legendary,100000,500,Standard,images\Ballerina Cappuccina.png
+Chef Crabracadabra,Legendary,150000,600,Standard,images\Chef Crabracadabra.png
+Lionel Cactuseli,Legendary,175000,650,Standard,images\Lionel Cactuseli.png
+Glorbo Fruttodrillo,Legendary,200000,750,Standard,images\Glorbo Fruttodrillo.png
+Quivioli Ameleonni,Legendary,225000,900,Standard,
+Blueberrinni Octopusini,Legendary,250000,1000,Standard,images\Blueberrinni Octopusini.png
+Caramello Filtrello,Legendary,255000,1000,Standard,images\Caramello Filtrello.png
+Pipi Potato,Legendary,256000,1100,Standard,images\Pipi Potato.png
+Strawberelli Flamingelli,Legendary,275000,1000,Standard,images\Strawberelli Flamingelli.png
+Cocosini Mama,Legendary,285000,1200,Standard,images\Cocosini Mama.png
+Pandaccini Bananini,Legendary,300000,1200,Standard,images\Pandaccini Bananini.png
+Pi Pi Watermelon,Legendary,315000,1300,Standard,images\Pi Pi Watermelon.png
+Signore Carapace,Legendary,320000,1300,Standard,images\Signore Carapace.png
+Sigma Boy,Legendary,325000,1300,Standard,images\Sigma Boy.png
+Frigo Camelo,Mythic,350000,1400,Standard,images\Frigo Camelo.png
+Orangutini Ananassini,Mythic,400000,1700,Standard,images\Orangutini Ananassini.png
+Rhino Toasterino,Mythic,450000,2100,Standard,images\Rhino Toasterino.png
+Bombardiro Crocodilo,Mythic,500000,2500,Standard,images\Bombardiro Crocodilo.png
+Bruto Gialutto,Mythic,600000,3000,Standard,images\Bruto Gialutto.png
+Spioniro Golubiro,Mythic,750000,3500,Standard,images\Spioniro Golubiro.png
+Bombombini Gusini,Mythic,1,5000,Standard,images\Bombombini Gusini.png
+Zibra Zubra Zibralini,Mythic,1,6000,Standard,images\Zibra Zubra Zibralini.png
+Tigrilini Watermelini,Mythic,17,5000,Standard,images\Tigrilini Watermelini.png
+Avocadorilla,Mythic,2,7000,Standard,images\Avocadorilla.png
+Cavallo Virtuoso,Mythic,2,7500,Standard,images\Cavallo Virtuoso.png
+Gorillo Subwoofero,Mythic,2,7700,Standard,images\Gorillo Subwoofero.png
+Gorillo Watermelondrillo,Mythic,3,8000,Standard,images\Gorillo Watermelondrillo.png
+Tob Tobi Tobi,Mythic,3,8500,Standard,images\Tob Tobi Tobi.png
+Lerulerulerule,Mythic,3,8700,Standard,images\Lerulerulerule.png
+Ganganzelli Trulala,Mythic,3,9000,Standard,images\Ganganzelli Trulala.png
+Te Te Te Sahur,Mythic,4,9500,Standard,images\Te Te Te Sahur.png
+Tracoducotulu Delapeladustuz,Mythic,3,12000,Standard,images\Tracoducotulu Delapeladustuz.png
+Los Noobinis,Mythic,4,12500,Standard,images\Los Noobinis.png
+Carrotini Brainini,Mythic,4,15000,Standard,images\Carrotini Brainini.png
+Carloo,Mythic,4,5000,Standard,images\Carloo.png
+Mythic Lucky Block,Mythic,2,0,Standard,images\Mythic Lucky Block.png
+Cocofanto Elefanto,Brainrot God,5,17500,Standard,images\Cocofanto Elefanto.png
+Antonio,Brainrot God,6,18500,Standard,images\Antonio.png
+Girafa Celestre,Brainrot God,7,20000,Standard,images\Girafa Celestre.png
+Tralalero Tralala,Brainrot God,10,50000,Standard,images\Tralalero Tralala.png
+Los Crocodillitos,Brainrot God,12,55000,Standard,images\Los Crocodillitos.png
+Tigroligre Frutonni,Brainrot God,25,60000,Standard,images\Tigroligre Frutonni.png
+Odin Din Din Dun,Brainrot God,15,75000,Standard,images\Odin Din Din Dun.png
+Tukanno Bananno,Brainrot God,22,100000,Standard,images\Tukanno Bananno.png
+Orcalero Orcala,Brainrot God,25,100000,Standard,images\Orcalero Orcala.png
+Tralalita Tralala,Brainrot God,20,100000,Standard,images\Tralalita Tralala.png
+Extinct Ballerina,Brainrot God,23,125000,Standard,images\Extinct Ballerina.png
+Trenostruzzo Turbo 3000,Brainrot God,25,150000,Standard,images\Trenostruzzo Turbo 3000.png
+Trippi Troppi Troppa Trippa,Brainrot God,30,175000,Standard,images\Trippi Troppi Troppa Trippa.png
+Las Cappuchinas,Brainrot God,82,185000,Standard,images\Las Cappuchinas.png
+Ballerino Lololo,Brainrot God,35,200000,Standard,images\Ballerino Lololo.png
+Bulbito Bandito Traktorito,Brainrot God,25,205000,Standard,images\Bulbito Bandito Traktorito.png
+Los Tungtungtungcitos,Brainrot God,37,210000,Standard,images\Los Tungtungtungcitos.png
+Pakrahmatmamat,Brainrot God,37,215000,Standard,images\Pakrahmatmamat.png
+Piccione Macchina,Brainrot God,40,225000,Standard,images\Piccione Macchina.png
+Brr es Teh Patipum,Brainrot God,40,225000,Standard,images\Brr es Teh Patipum.png
+Los Orcalitos,Brainrot God,45,235000,Standard,images\Los Orcalitos.webp
+Orcalita Orcala,Brainrot God,45,240000,Standard,images\Orcalita Orcala.png
+Cacasito Satalito,Brainrot God,45,240000,Standard,images\Cacasito Satalito.png
+Belula Beluga,Brainrot God,60,290000,Standard,images\Belula Beluga.png
+Tartaruga Cisterna,Brainrot God,45,250000,Standard,images\Tartaruga Cisterna.png
+Piccionetta Machina,Brainrot God,47,270000,Standard,images\Piccionetta Machina.png
+Mastodontico Telepiedone,Brainrot God,15,275000,Standard,images\Mastodontico Telepiedone.png
+Anpali Babel,Brainrot God,48,280000,Standard,images\Anpali Babel.png
+Brainrot God Lucky Block,Brainrot God,15,0,Standard,images\Brainrot God Lucky Block.png
+Los Matteos,Secret,100,300000,Standard,images\Los Matteos.png
+Bisonte Giuppitere,Secret,75,300000,Standard,images\Bisonte Giuppitere.png
+La Vacca Saturno Saturnita,Secret,50,300000,Standard,images\La Vacca Saturno Saturnita.png
+Trenostruzzo Turbo 4000,Secret,100,310000,Standard,images\Trenostruzzo Turbo 4000.png
+Torrtuginni Dragonfrutini,Secret,500,350000,Standard,images\Torrtuginni Dragonfrutini.png
+Chachechi,Secret,85,400000,Standard,images\Chachechi.png
+Agarrini La Palini,Secret,80,425000,Standard,images\Agarrini La Palini.png
+Fragola La La La,Secret,125,450000,Standard,images\Fragola La La La.png
+Extinct Tralalero,Secret,125,450000,Standard,images\Extinct Tralalero.png
+Los Tralaleritos,Secret,100,500000,Standard,images\Los Tralaleritos.png
+La Karkerkar Combinasion,Secret,160,600000,Standard,images\La Karkerkar Combinasion.png
+Extinct Matteo,Secret,140,625000,Standard,images\Extinct Matteo.png
+Las Tralaleritas,Secret,150,650000,Standard,images\Las Tralaleritas.png
+Job Job Job Sahur,Secret,175,700000,Standard,images\Job Job Job Sahur.webp
+Las Vaquitas Saturnitas,Secret,200,750000,Standard,images\Las Vaquitas Saturnitas.png
+Graipuss Medussi,Secret,250,1,Standard,images\Graipuss Medussi.png
+La Sahur Combinasion,Secret,550,2,Standard,images\La Sahur Combinasion.png
+Pot Hotspot,Secret,500,2,Standard,images\Pot Hotspot.png
+Chicleteira Bicicleteira,Secret,750,3,Standard,images\Chicleteira Bicicleteira.png
+Los Chicleteiras,Secret,1,7,Standard,images\Los Chicleteiras.png
+La Grande Combinasion,Secret,1,10,Standard,images\La Grande Combinasion.png
+Los Combinasionas,Secret,2,15,Standard,images\Los Combinasionas.png
+Tacorita Bicicleta,Secret,2,16,Standard,images\Tacorita Bicicleta.png
+Nuclearo Dinossauro,Secret,2,15,Standard,images\Nuclearo Dinossauro.png
+Las Sis,Secret,25,17,Standard,images\Las Sis.png
+Los Hotspotsitos,Secret,3,20,Standard,images\Los Hotspotsitos.png
+Celularcini Viciosini,Secret,2,22,Standard,images\Celularcini Viciosini.png
+Los Bros,Secret,2,24,Standard,images\Los Bros.png
+Tralaledon,Secret,3,27,Standard,images\Tralaledon.png
+Esok Sekolah,Secret,3,30,Standard,images\Esok Sekolah.png
+Ketupat Kepat,Secret,5,35,Standard,images\Ketupat Kepat.png
+La Supreme Combinasion,Secret,7,40,Standard,images\La Supreme Combinasion.png
+Ketchuru and Musturu,Secret,7,42,Standard,images\Ketchuru and Musturu.png
+Garama and Madundung,Secret,10,50,Standard,images\Garama and Madundung.png
+Nooo My Hotspot,Secret,500,1,Standard,images\Nooo My Hotspot.png
+Los Nooo My Hotspotsitos,Secret,1,5,Standard,images\Los Nooo My Hotspotsitos.png
+Spaghetti Tualetti,Secret,15,60,Standard,images\Spaghetti Tualetti.png
+Dragon Cannelloni,Secret,100,100,Standard,images\Dragon Cannelloni.png
+Secret Lucky Block,Secret,750,0,Standard,images\Secret Lucky Block.png
+Strawberry Elephant,OG,500,300,Standard,images\Strawberry Elephant.png

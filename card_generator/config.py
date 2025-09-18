@@ -379,6 +379,12 @@ class DatabaseBuilderConfig:
     validate_images: bool = True  # Validate downloaded images
     continue_on_error: bool = True  # Continue processing other characters on individual failures
     
+    # Data validation options
+    strict_validation: bool = False  # Use strict validation mode
+    validate_urls: bool = True  # Validate image URLs for accessibility
+    normalize_data: bool = True  # Normalize character names and other data
+    detect_duplicates: bool = True  # Detect and report duplicate characters
+    
     def __post_init__(self):
         """Validate configuration values after initialization."""
         # Set default tier headings if not provided
