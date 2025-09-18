@@ -530,7 +530,8 @@ class DataValidator:
                 return result
             
             if parsed.scheme not in ['http', 'https']:
-                result.warnings.append("URL uses non-standard scheme")
+                result.is_valid = False
+                result.errors.append("URL must use http or https scheme")
         
         except Exception as e:
             result.is_valid = False
@@ -682,21 +683,24 @@ class DataValidator:
                     processed_indices.add(j)
             
             if duplicate_indices:
+                # Check the type of duplication for the first duplicate to determine overall type
+                first_duplicate_similarity = self._calculate_similarity(char1, characters[duplicate_indices[0]])
+                
                 duplicate_info = DuplicateInfo(
                     original_index=i,
                     duplicate_indices=duplicate_indices,
-                    similarity_score=1.0,  # Exact duplicates
-                    duplicate_type=similarity['type']
+                    similarity_score=first_duplicate_similarity['score'],
+                    duplicate_type=first_duplicate_similarity['type']
                 )
                 duplicates.append(duplicate_info)
                 
                 # Add error or warning
                 char_names = [characters[idx].name for idx in [i] + duplicate_indices]
-                if similarity['type'] == 'exact':
+                if first_duplicate_similarity['type'] in ['exact', 'exact_name']:
                     result.errors.append(f"Exact duplicate characters found: {', '.join(char_names)}")
                     result.is_valid = False
                 else:
-                    result.warnings.append(f"Similar characters found ({similarity['type']}): {', '.join(char_names)}")
+                    result.warnings.append(f"Similar characters found ({first_duplicate_similarity['type']}): {', '.join(char_names)}")
         
         if duplicates:
             self.validation_stats['duplicates_found'] += len(duplicates)

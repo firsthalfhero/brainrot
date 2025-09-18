@@ -347,7 +347,7 @@ class TestDataValidatorIntegration(unittest.TestCase):
     
     def test_strict_vs_non_strict_mode(self):
         """Test differences between strict and non-strict validation modes."""
-        problematic_character = CharacterData(
+        problematic_character = self._create_test_character(
             name="Character@#$%",  # Invalid characters
             tier="InvalidTier",   # Invalid tier
             cost=-100,           # Negative cost
@@ -385,7 +385,7 @@ class TestDataValidatorIntegration(unittest.TestCase):
             
             # Data with extraction issues
             CharacterData("Partial Data", "Epic", 0, 0, "Standard"),  # Missing numeric data
-            CharacterData("", "Common", 100, 5, "Standard"),  # Missing name
+            self._create_test_character("", "Common", 100, 5, "Standard"),  # Missing name
             
             # Data with formatting issues
             CharacterData("  UPPERCASE NAME  ", "LEGENDARY", 500, 25, "STANDARD"),

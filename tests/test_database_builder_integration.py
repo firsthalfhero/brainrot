@@ -252,6 +252,78 @@ class TestDatabaseBuilderIntegration(unittest.TestCase):
             
             self.assertIn("no valid characters", str(context.exception).lower())
     
+    def test_network_timeout_handling(self):
+        """Test handling of network timeouts during scraping."""
+        import socket
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape:
+            mock_scrape.side_effect = socket.timeout("Request timed out")
+            
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("wiki", str(context.exception).lower())
+    
+    def test_http_error_handling(self):
+        """Test handling of HTTP errors during scraping."""
+        import requests
+        
+        mock_tier_data = {"Common": ["Test Character"]}
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = requests.HTTPError("404 Not Found")
+            
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("no valid characters", str(context.exception).lower())
+    
+    def test_rate_limiting_detection_and_backoff(self):
+        """Test detection of rate limiting and adaptive backoff."""
+        import requests
+        
+        mock_tier_data = {"Common": ["Test Character 1", "Test Character 2"]}
+        
+        # Mock rate limiting response
+        rate_limit_response = requests.HTTPError("429 Too Many Requests")
+        rate_limit_response.response = Mock()
+        rate_limit_response.response.status_code = 429
+        
+        call_count = 0
+        def mock_extract_with_rate_limit(name, tier):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:  # First call gets rate limited
+                raise rate_limit_response
+            # Subsequent calls succeed
+            return CharacterData(
+                name=name,
+                tier=tier,
+                cost=100,
+                income=5,
+                variant="Standard"
+            )
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.image_downloader, 'download_character_image') as mock_download:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = mock_extract_with_rate_limit
+            mock_download.return_value = True
+            
+            # Should handle rate limiting gracefully and continue processing
+            result = self.database_builder.build_database()
+            
+            # Verify that rate limiting was encountered but processing continued
+            self.assertEqual(result.total_characters, 2)
+            self.assertEqual(result.successful_extractions, 1)  # One succeeded after rate limit
+            self.assertEqual(result.failed_extractions, 1)  # One failed due to rate limit
+            self.assertTrue(len(result.errors) > 0)  # Should have error messages
+    
     def test_image_download_failure_handling(self):
         """Test handling of image download failures."""
         mock_tier_data = {"Common": ["Test Character"]}
@@ -371,6 +443,145 @@ class TestDatabaseBuilderIntegration(unittest.TestCase):
             # Skip if data loader not available
             self.skipTest("CSVDataLoader not available for compatibility testing")
     
+    def test_csv_format_validation_comprehensive(self):
+        """Test comprehensive CSV format validation."""
+        # Test with various character data scenarios
+        test_characters = [
+            CharacterData(
+                name="Normal Character",
+                tier="Common",
+                cost=100,
+                income=5,
+                variant="Standard",
+                image_path="images/Normal Character.png"
+            ),
+            CharacterData(
+                name="Special Chars: àáâãäå",
+                tier="Rare",
+                cost=500,
+                income=25,
+                variant="Standard",
+                image_path="images/Special Chars àáâãäå.png"
+            ),
+            CharacterData(
+                name="Quotes \"and\" Commas, Test",
+                tier="Epic",
+                cost=1000,
+                income=50,
+                variant="Standard",
+                image_path="images/Quotes and Commas Test.png"
+            ),
+            CharacterData(
+                name="Very Long Character Name That Exceeds Normal Length Expectations",
+                tier="Legendary",
+                cost=2000,
+                income=100,
+                variant="Standard",
+                image_path=""  # Test empty image path
+            )
+        ]
+        
+        # Generate CSV
+        csv_path = self.database_builder.csv_generator.generate_csv(test_characters)
+        
+        # Verify CSV can be read back correctly
+        with open(csv_path, 'r', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            rows = list(reader)
+            
+            self.assertEqual(len(rows), 4)
+            
+            # Verify special characters are preserved
+            special_char_row = next(row for row in rows if "àáâãäå" in row['Character Name'])
+            self.assertEqual(special_char_row['Character Name'], "Special Chars: àáâãäå")
+            
+            # Verify quotes and commas are handled correctly
+            quotes_row = next(row for row in rows if "Quotes" in row['Character Name'])
+            self.assertEqual(quotes_row['Character Name'], "Quotes \"and\" Commas, Test")
+            
+            # Verify long names are preserved
+            long_name_row = next(row for row in rows if "Very Long" in row['Character Name'])
+            self.assertEqual(long_name_row['Character Name'], "Very Long Character Name That Exceeds Normal Length Expectations")
+            
+            # Verify empty image path is handled
+            self.assertEqual(long_name_row['Image Path'], "")
+    
+    def test_error_reporting_and_logging(self):
+        """Test comprehensive error reporting and logging functionality."""
+        mock_tier_data = {"Common": ["Test Character 1", "Test Character 2"]}
+        
+        # Mock various types of errors
+        call_count = 0
+        def mock_extract_with_various_errors(name, tier):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ConnectionError("Network connection failed")
+            elif call_count == 2:
+                raise ValueError("Invalid character data format")
+            return CharacterData(name=name, tier=tier, cost=100, income=5, variant="Standard")
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.image_downloader, 'download_character_image') as mock_download:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = mock_extract_with_various_errors
+            mock_download.return_value = True
+            
+            with self.assertRaises(Exception):
+                result = self.database_builder.build_database()
+            
+            # Verify error handler captured different error types
+            error_summary = self.database_builder.error_handler.get_error_summary()
+            self.assertGreater(error_summary['total_errors'], 0)
+            
+            # Verify different error categories were recorded
+            self.assertIn('character_extraction', error_summary['by_category'])
+    
+    def test_concurrent_access_simulation(self):
+        """Test behavior when multiple processes might access the same resources."""
+        import threading
+        import time
+        
+        mock_tier_data = {"Common": ["Test Character"]}
+        
+        # Simulate file system contention
+        def mock_csv_with_contention(characters):
+            # Simulate brief delay as if another process is accessing the file
+            time.sleep(0.1)
+            if hasattr(mock_csv_with_contention, 'call_count'):
+                mock_csv_with_contention.call_count += 1
+            else:
+                mock_csv_with_contention.call_count = 1
+            
+            if mock_csv_with_contention.call_count == 1:
+                # First call simulates file being locked by another process
+                raise OSError("Resource temporarily unavailable")
+            
+            # Second call succeeds
+            return self.database_builder.csv_generator.generate_csv(characters)
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.csv_generator, 'generate_csv') as mock_csv:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.return_value = CharacterData(
+                name="Test Character",
+                tier="Common",
+                cost=100,
+                income=5,
+                variant="Standard"
+            )
+            mock_csv.side_effect = mock_csv_with_contention
+            
+            # Should handle the temporary resource unavailability
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("csv", str(context.exception).lower())
+    
     def test_comprehensive_error_scenarios(self):
         """Test various error scenarios and recovery mechanisms."""
         
@@ -406,6 +617,82 @@ class TestDatabaseBuilderIntegration(unittest.TestCase):
                 result = self.database_builder.build_database()
             
             self.assertIn("csv", str(context.exception).lower())
+    
+    def test_malformed_html_handling(self):
+        """Test handling of malformed HTML responses."""
+        from bs4 import BeautifulSoup
+        
+        mock_tier_data = {"Common": ["Test Character"]}
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract:
+            
+            mock_scrape.return_value = mock_tier_data
+            # Simulate HTML parsing error
+            mock_extract.side_effect = Exception("HTML parsing failed - malformed content")
+            
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("no valid characters", str(context.exception).lower())
+    
+    def test_disk_space_exhaustion(self):
+        """Test handling of disk space exhaustion during CSV generation."""
+        mock_tier_data = {"Common": ["Test Character"]}
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.csv_generator, 'generate_csv') as mock_csv:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.return_value = CharacterData(
+                name="Test Character",
+                tier="Common",
+                cost=100,
+                income=5,
+                variant="Standard"
+            )
+            # Simulate disk space exhaustion
+            disk_error = OSError("No space left on device")
+            disk_error.errno = 28  # ENOSPC
+            mock_csv.side_effect = disk_error
+            
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("csv", str(context.exception).lower())
+    
+    def test_memory_exhaustion_handling(self):
+        """Test handling of memory exhaustion during processing."""
+        mock_tier_data = {"Common": ["Test Character"]}
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = MemoryError("Out of memory")
+            
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("no valid characters", str(context.exception).lower())
+    
+    def test_unicode_encoding_errors(self):
+        """Test handling of Unicode encoding errors in character names."""
+        mock_tier_data = {"Common": ["Test Character"]}
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = UnicodeDecodeError(
+                'utf-8', b'\xff\xfe', 0, 1, 'invalid start byte'
+            )
+            
+            with self.assertRaises(Exception) as context:
+                result = self.database_builder.build_database()
+            
+            self.assertIn("no valid characters", str(context.exception).lower())
     
     def test_configuration_validation(self):
         """Test configuration validation and error handling."""
@@ -467,6 +754,125 @@ class TestDatabaseBuilderIntegration(unittest.TestCase):
                 reader = csv.DictReader(csvfile)
                 rows = list(reader)
                 self.assertEqual(len(rows), expected_total)
+    
+    def test_intermittent_network_failures(self):
+        """Test handling of intermittent network failures during processing."""
+        mock_tier_data = {"Common": [f"Character {i}" for i in range(10)]}
+        
+        # Mock intermittent failures - every 3rd character fails
+        call_count = 0
+        def mock_extract_with_intermittent_failures(name, tier):
+            nonlocal call_count
+            call_count += 1
+            if call_count % 3 == 0:  # Every 3rd call fails
+                raise ConnectionError(f"Network error for {name}")
+            return CharacterData(
+                name=name,
+                tier=tier,
+                cost=100,
+                income=5,
+                variant="Standard"
+            )
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.image_downloader, 'download_character_image') as mock_download:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = mock_extract_with_intermittent_failures
+            mock_download.return_value = True
+            
+            result = self.database_builder.build_database()
+            
+            # Should have processed some characters successfully despite failures
+            self.assertEqual(result.total_characters, 10)
+            self.assertGreater(result.successful_extractions, 0)
+            self.assertGreater(result.failed_extractions, 0)
+            self.assertLess(result.get_success_rate(), 100.0)
+            
+            # Should have error messages for failed characters
+            self.assertTrue(len(result.errors) > 0)
+    
+    def test_error_recovery_and_continuation(self):
+        """Test that processing continues after individual character failures."""
+        mock_tier_data = {
+            "Common": ["Good Character 1", "Bad Character", "Good Character 2"],
+            "Rare": ["Good Rare Character"]
+        }
+        
+        def mock_extract_with_selective_failures(name, tier):
+            if "Bad" in name:
+                raise ValueError(f"Simulated extraction failure for {name}")
+            return CharacterData(
+                name=name,
+                tier=tier,
+                cost=100,
+                income=5,
+                variant="Standard"
+            )
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.image_downloader, 'download_character_image') as mock_download:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = mock_extract_with_selective_failures
+            mock_download.return_value = True
+            
+            result = self.database_builder.build_database()
+            
+            # Should have processed 3 out of 4 characters successfully
+            self.assertEqual(result.total_characters, 4)
+            self.assertEqual(result.successful_extractions, 3)
+            self.assertEqual(result.failed_extractions, 1)
+            
+            # Verify CSV contains only successful characters
+            with open(result.csv_file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                rows = list(reader)
+                self.assertEqual(len(rows), 3)
+                
+                character_names = [row['Character Name'] for row in rows]
+                self.assertIn('Good Character 1', character_names)
+                self.assertIn('Good Character 2', character_names)
+                self.assertIn('Good Rare Character', character_names)
+                self.assertNotIn('Bad Character', character_names)
+    
+    def test_progress_tracking_during_errors(self):
+        """Test that progress tracking works correctly even with errors."""
+        mock_tier_data = {"Common": [f"Character {i}" for i in range(5)]}
+        
+        # Mock failures for some characters
+        def mock_extract_with_some_failures(name, tier):
+            if "Character 2" in name or "Character 4" in name:
+                raise ConnectionError(f"Network error for {name}")
+            return CharacterData(
+                name=name,
+                tier=tier,
+                cost=100,
+                income=5,
+                variant="Standard"
+            )
+        
+        with patch.object(self.database_builder.wiki_scraper, 'scrape_brainrots_page') as mock_scrape, \
+             patch.object(self.database_builder.character_extractor, 'extract_character_data') as mock_extract, \
+             patch.object(self.database_builder.image_downloader, 'download_character_image') as mock_download:
+            
+            mock_scrape.return_value = mock_tier_data
+            mock_extract.side_effect = mock_extract_with_some_failures
+            mock_download.return_value = True
+            
+            result = self.database_builder.build_database()
+            
+            # Progress should show all characters were processed
+            progress_info = self.database_builder.get_progress_info()
+            self.assertEqual(progress_info['characters_processed'], 5)
+            self.assertEqual(progress_info['total_characters'], 5)
+            self.assertEqual(progress_info['progress_percentage'], 100.0)
+            
+            # Results should reflect partial success
+            self.assertEqual(result.successful_extractions, 3)
+            self.assertEqual(result.failed_extractions, 2)
 
 
 if __name__ == '__main__':
